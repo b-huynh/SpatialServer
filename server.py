@@ -9,6 +9,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
     """
 
     def handle(self):
+        print("Received something... checking")
         data = self.request[0].strip()
         socket = self.request[1]
         print("{} wrote:".format(self.client_address[0]))
@@ -16,6 +17,6 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
         socket.sendto(data.upper(), self.client_address)
 
 if __name__ == "__main__":
-    HOST, PORT = "0.0.0.0", 9999
+    HOST, PORT = "localhost", 9999
     server = socketserver.UDPServer((HOST, PORT), MyUDPHandler)
     server.serve_forever()
