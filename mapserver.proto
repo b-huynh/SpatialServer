@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+message Vec3D {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message Vec4D {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float w = 4;
+}
+
+message Face {
+    uint32 v1 = 1;
+    uint32 v2 = 2;
+    uint32 v3 = 3;
+}
+
+message Mesh {
+    uint64 timestamp = 1;
+
+    repeated Vec3D vertices = 100;
+    repeated Face faces = 101;
+}
+
+message ImageInfo {
+    string name = 1;
+    string ext = 2;
+    uint32 byte_size = 3;
+}
+
+message MapserverMessage {
+    uint32 client_id = 1;
+    
+    enum ClientType {
+        UNIVERSAL = 0;
+        IMAGE = 1;
+        HOLOLENS = 2;
+    }
+
+    ClientType client_type = 2;
+
+    // One of the following will be filled in.
+    Mesh mesh = 100;
+    ImageInfo image_info = 200;
+}
