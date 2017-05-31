@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package hsm;
+
 message Vec3D {
     float x = 1;
     float y = 2;
@@ -24,6 +26,7 @@ message Mesh {
 
     repeated Vec3D vertices = 100;
     repeated Face faces = 101;
+    repeated Vec3D normals = 102;
 }
 
 message ImageInfo {
@@ -32,7 +35,7 @@ message ImageInfo {
     uint32 byte_size = 3;
 }
 
-message MapserverMessage {
+message APIRequest {
     uint32 client_id = 1;
     
     enum ClientType {
@@ -46,4 +49,9 @@ message MapserverMessage {
     // One of the following will be filled in.
     Mesh mesh = 100;
     ImageInfo image_info = 200;
+}
+
+message APIResponse {
+    uint32 code = 1;
+    string text = 2;
 }
