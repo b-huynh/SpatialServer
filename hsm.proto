@@ -2,6 +2,17 @@ syntax = "proto3";
 
 package hsm;
 
+enum ClientType {
+    UNKNOWN = 0;
+    MOBILE = 1;
+    HOLOLENS = 2;
+}
+
+enum Method {
+    SEND_IMAGE = 0;
+    SEND_MESH = 1;
+}
+
 message Vec3D {
     float x = 1;
     float y = 2;
@@ -22,32 +33,29 @@ message Face {
 }
 
 message Mesh {
-    uint64 timestamp = 1;
+    repeated Vec3D vertices = 1;
+    repeated Face faces = 2;
+    repeated Vec3D normals = 3;
+}
 
-    repeated Vec3D vertices = 100;
-    repeated Face faces = 101;
-    repeated Vec3D normals = 102;
+message MeshInfo {
+    uint64 timestamp = 1;
 }
 
 message ImageInfo {
     string name = 1;
     string ext = 2;
-    uint32 byte_size = 3;
 }
 
 message APIRequest {
-    uint32 client_id = 1;
-    
-    enum ClientType {
-        UNIVERSAL = 0;
-        IMAGE = 1;
-        HOLOLENS = 2;
-    }
-
+    uint32 client_key = 1;
     ClientType client_type = 2;
 
+    Method method = 3;
+    uint64 blob_size = 4;
+
     // One of the following will be filled in.
-    Mesh mesh = 100;
+    MeshInfo mesh_info = 100;
     ImageInfo image_info = 200;
 }
 

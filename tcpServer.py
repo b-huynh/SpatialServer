@@ -2,10 +2,9 @@ import socketserver
 import struct
 import os
 
-import proto.mapserver_pb2 as server_pb
+import hsm.hsm_pb2 as hsm_pb
 
-IMAGE_DATA = 'image_data'
-HOLOLENS_DATA = 'hololens_data'
+OUTDIR = 'image_data'
 
 class MapserverTCPHandler(socketserver.BaseRequestHandler):
 
@@ -13,28 +12,38 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
         # self.request is the TCP socket connected to the client
         self.data = self.request.recv(4)
         msg_size = struct.unpack('!i', self.data)[0]
-        self.handleMessage(msg_size)
+        self.handle_message(msg_size)
 
         print("Received message from {}".format(self.client_address[0]))
-        self.request.sendall("OK".encode('utf-8'))
-
-    def handleMessage(self, msg_size):
-        self.data = self.request.recv(msg_size)
-        self.msg = server_pb.MapserverMessage()
-        self.msg.ParseFromString(self.data)
         print(self.msg)
 
-        if self.msg.client_type == server_pb.MapserverMessage.IMAGE:
-            self.writeJPG()
+        self._send_response()
 
-    def writeJPG(self):
+    def handle_message(self, msg_size):
+        self.data = self.request.recv(msg_size)
+        self.msg = hsm_pb.APIRequest()
+        self.msg.ParseFromString(self.data)
+
+
+        if self.msg.method == hsm_pb.SEND_IMAGE:
+            self.write_image()
+        elif self.msg.method == hsm_pb.SEND_MESH:
+            self.write_mesh()
+
+    def write_image(self):
         fname = self.msg.image_info.name + self.msg.image_info.ext
-        fpath = os.path.join(IMAGE_DATA, fname)
+        fpath = os.path.join(OUTDIR, fname)
+        self._write_file(fpath)
 
+    def write_mesh(self):
+        fpath = os.path.join(OUTDIR, str(self.msg.client_key) + "_mesh")
+        self._write_file(fpath) 
+
+    def _write_file(self, fpath):
         if os.path.isfile(fpath):
             os.remove(fpath)
 
-        remaining = self.msg.image_info.byte_size
+        remaining = self.msg.blob_size
         with open(fpath, "ab") as f:
             while True:
                 img_data = self.request.recv(4096)
@@ -42,6 +51,15 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
                 remaining = remaining - len(img_data)
                 if remaining <= 0:
                     break;
+
+    def _send_response(self):
+        response = hsm_pb.APIResponse()
+        response.code = 200
+        response.text = "OK"
+
+        data = bytearray(struct.pack('!i', response.ByteSize()))
+        data.extend(response.SerializeToString())
+        self.request.sendall(data)
 
 if __name__ == "__main__":
     HOST, PORT = "0.0.0.0", 9999
