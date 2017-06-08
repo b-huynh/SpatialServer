@@ -57,8 +57,3 @@ def get_lat_lon(exif):
 	if longitude_ref == "W":
 		lon = 0 - lon
 	return (lat, lon)
-
-exif = get_exif("antipasto.jpg")
-if hasGPSInfo(exif):
-	lat, lon = get_lat_lon(exif)
-	print("{0:.8f}, {1:.8f}".format(lat, lon))	
