@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
 	    # Receive data from the server and shut down
 	    received = sock.recv(4)
-	    response_size = struct.unpack('!i', received)[0]
+	    response_size = struct.unpack('<i', received)[0]
 	    response_data = sock.recv(response_size)
 	    response = hsm_pb.APIResponse()
 	    response.ParseFromString(response_data)
