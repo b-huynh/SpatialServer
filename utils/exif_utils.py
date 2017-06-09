@@ -29,11 +29,11 @@ def get_exif(fpath):
 	}
 	return exif
 
-def hasGPSInfo(exif):
+def has_gpsinfo(exif):
 	return "GPSInfo" in exif
 
 def get_lat_lon(exif):
-	if not hasGPSInfo(exif):
+	if not has_gpsinfo(exif):
 		return None
 	else:
 		gps_info = exif["GPSInfo"]

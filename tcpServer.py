@@ -1,10 +1,14 @@
 import socketserver
 import struct
 import os
+import json
 
 import hsm.hsm_pb2 as hsm_pb
 
+from utils import exif_utils
+
 OUTDIR = 'image_data'
+METADATA_FILE = 'metadata.json'
 
 class MapserverTCPHandler(socketserver.BaseRequestHandler):
 
@@ -50,7 +54,26 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
                 f.write(img_data)
                 remaining = remaining - len(img_data)
                 if remaining <= 0:
-                    break;
+                    break
+
+        self._update_image_metadata(fpath)
+
+    def _update_image_metadata(self, image_path):
+        exif = exif_utils.get_exif(image_path)
+        if not exif_utils.has_gpsinfo(exif):
+            return
+        lat, lon = exif_utils.get_lat_lon(exif)
+
+        with open(METADATA_FILE, 'r') as metadata_file:
+            metadata = json.load(metadata_file)
+            basename = os.path.basename(image_path)
+            metadata[basename] = {
+                'lat': lat,
+                'lon': lon,
+            }
+
+        with open(METADATA_FILE, 'w') as metadata_file:
+            json.dump(metadata, metadata_file)
 
     def _send_response(self):
         response = hsm_pb.APIResponse()
