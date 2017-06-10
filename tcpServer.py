@@ -80,7 +80,7 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
         response.code = 200
         response.text = "OK"
 
-        data = bytearray(struct.pack('!i', response.ByteSize()))
+        data = bytearray(struct.pack('<i', response.ByteSize()))
         data.extend(response.SerializeToString())
         self.request.sendall(data)
 
