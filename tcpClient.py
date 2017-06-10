@@ -5,7 +5,7 @@ import os
 
 import hsm.hsm_pb2 as hsm_pb
 
-HOST, PORT = "138.197.216.48", 9999
+#HOST, PORT = "138.197.216.48", 9999
 HOST, PORT = "localhost", 9999
 
 class SendImageRequest:

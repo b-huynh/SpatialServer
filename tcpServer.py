@@ -60,7 +60,7 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
 
     def _update_image_metadata(self, image_path):
         exif = exif_utils.get_exif(image_path)
-        if not exif_utils.has_gpsinfo(exif):
+        if exif == None or not exif_utils.has_gpsinfo(exif):
             return
         lat, lon = exif_utils.get_lat_lon(exif)
 
