@@ -8,7 +8,7 @@ I've only tested this on Linux and OS X. It *should* work for Windows.
 
 
 
-#####Setup Environment
+##### Setup Environment
 Create a new virtual environment and use it
 ```bash
 virtualenv -p python3 env
@@ -40,20 +40,20 @@ Build the protobuffers (only necessary if the pre-compiled ones are out of date)
 protoc hsm/protos/*.proto --python_out=.
 ```
 
-#####Running the server
+##### Running the server
 ```bash
 # From SpatialServer/hsm/server
 python3 server.py
 ```
 
-#####Running the Python client
+##### Running the Python client
 The currently the python client can only send images to the server. It is useful for testing purposes. There are some sample images in sample_image_data folder.
 ```bash
 # From SpatialServer/hsm/client
 python3 client.py <path to image file>
 ```
 
-#####Adding new methods to the API
+##### Adding new methods to the API
 The API methods are defined in [hsm.proto](hsm/protos/hsm.proto). If you are not familiar, it would be useful to take a look at the [Protocol Buffers](https://developers.google.com/protocol-buffers/docs/pythontutorial) documentation.
 
 New method names are defined in
@@ -110,5 +110,5 @@ See [client.py](hsm/client/client.py) for an example
 
 \*Will fix this *soon*...
 
-#####Related Repos
+##### Related Repos
 - [Hololens Client](https://github.ucsb.edu/ychang/HoloModeler) (Yun Suk Chang)
