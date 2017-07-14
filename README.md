@@ -40,6 +40,11 @@ Build the protobuffers (only necessary if the pre-compiled ones are out of date)
 protoc hsm/protos/*.proto --python_out=.
 ```
 
+Add the project to your Python path
+```bash
+export PYTHONPATH=$PYTHONPATH:/path/to/SpatialServer
+```
+
 ##### Running the server
 ```bash
 # From SpatialServer/hsm/server
