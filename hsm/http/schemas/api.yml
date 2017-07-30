@@ -1,0 +1,31 @@
+# Schemas for validating JSON data sent in API calls
+
+client_schema:
+  api_key:
+    required: True
+    type: string
+    maxlength: 32
+  device:
+    type: string
+    allowed:
+      - python_client
+      - microsoft_hololens
+      - googe_tango
+
+upload_schema:
+  client:
+    required: True
+    schema: client_schema
+  datatype:
+    required: True
+    type: string
+    allowed:
+      - image
+      - mesh
+  ext:
+    required: True
+    type: string
+    allowed:
+      - jpg
+      - png
+      - obj
