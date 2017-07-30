@@ -3,10 +3,8 @@ import struct
 import sys
 import os
 
+from hsm import config
 from hsm.protos import hsm_pb2 as hsm_pb
-
-#HOST, PORT = "138.197.216.48", 9999
-HOST, PORT = "localhost", 9999
 
 class SendImageRequest:
 	def __init__(self, key):
@@ -47,7 +45,7 @@ if __name__ == '__main__':
 	# Create a socket (SOCK_STREAM means a TCP socket)
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 	    # Connect to server and send data
-	    sock.connect((HOST, PORT))
+	    sock.connect((config.TCP_API_HOST, config.TCP_API_PORT))
 	    sock.sendall(request.data)
 
 	    # Receive data from the server and shut down

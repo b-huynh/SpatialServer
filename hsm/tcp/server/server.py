@@ -3,6 +3,7 @@ import struct
 import os
 import json
 
+from hsm import config
 from hsm.protos import hsm_pb2 as hsm_pb
 from hsm.utils import exif_utils
 
@@ -39,7 +40,7 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
 
     def write_mesh(self):
         fpath = os.path.join(OUTDIR, str(self.msg.client_key) + "_mesh")
-        self._write_file(fpath) 
+        self._write_file(fpath)
 
     def _write_file(self, fpath):
         if os.path.isfile(fpath):
@@ -83,7 +84,7 @@ class MapserverTCPHandler(socketserver.BaseRequestHandler):
         self.request.sendall(data)
 
 if __name__ == "__main__":
-    HOST, PORT = "0.0.0.0", 9999
+    HOST, PORT = "0.0.0.0", config.TCP_API_PORT
 
     # Create the server, binding to localhost on port 9999
     server = socketserver.TCPServer((HOST, PORT), MapserverTCPHandler)
