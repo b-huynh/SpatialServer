@@ -28,5 +28,6 @@ def list_data():
     api_request = apireq.APIRequest(request, 'client_schema')
     if api_request.is_invalid():
         return api_request.error_text, 400
-    return json.dumps(file_management.list_recent(), indent=4,
+    f = json.dumps(file_management.list_recent(), indent=4,
                       default=json_util.default), 200
+    return f

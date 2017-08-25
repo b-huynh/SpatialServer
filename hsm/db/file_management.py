@@ -11,6 +11,10 @@ from hsm.db import mongo_client
 
 db = mongo_client.db
 
+#TODO: Expose this more?
+KNOWN_DATATYPES = ['image', 'mesh']
+KNOWN_EXTENSIONS = ['jpg', 'JPG', 'jpeg', 'png', 'obj']
+
 def add_file(file_obj, datatype, ext):
     """Add file to server file storage and register in db
     Args:
@@ -20,18 +24,17 @@ def add_file(file_obj, datatype, ext):
     Raises:
         ValueError: If `datatype` is not valid
     """
-    if datatype == 'image':
-        add_image_file(file_obj, ext)
-    else:
-        raise ValueError("Unknown datatype '{}'".format(datatype))
+    if datatype not in KNOWN_DATATYPES or ext not in KNOWN_EXTENSIONS:
+      raise ValueError("Unknown datatype/ext {}/{}".format(datatype, ext))
+    _add_file_impl(file_obj, datatype, ext)
 
-def add_image_file(file_obj, ext):
+def _add_file_impl(file_obj, datatype, ext):
     file_id = str(uuid.uuid4())
     output_name = "{}.{}".format(file_id, ext)
     db.files.insert_one({
         'file_id': file_id,
         'path': write_file(file_obj, output_name),
-        'datatype': 'image',
+        'datatype': datatype,
         'ext': ext,
         'date_created': datetime.datetime.utcnow(),
     })

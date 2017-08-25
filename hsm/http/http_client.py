@@ -25,6 +25,8 @@ parser.add_argument('--port', type=int, default=config.REST_API_PORT,
 # TODO: Make this less specific.
 parser.add_argument('--image_path', type=str,
                     help='Path to image file to upload')
+parser.add_argument('--mesh_path', type=str,
+                    help='Path to image file to upload')
 parser.add_argument('--list_users', action='store_true',
                     help='List new users')
 parser.add_argument('--list_data', action='store_true',
@@ -51,23 +53,26 @@ def list_data(base_url, api_key):
     r = requests.get(api_url, json=api_payload)
     print_response(r)
 
-def upload_image(base_url, api_key, image_path):
-    if not os.path.isfile(image_path):
-        pprint("File '%s' not found" % image_path)
+def upload_file(base_url, api_key, file_path, datatype):
+    if not os.path.isfile(file_path):
+        pprint("File '%s' not found" % file_path)
         return
 
-    api_url = urljoin(base_url, '/api/image/upload')
+    _, ext = os.path.splitext(file_path)
+    ext = ext.lstrip('.')
+
+    api_url = urljoin(base_url, '/api/data/upload')
     api_payload = {
         'client': {
             'api_key': api_key,
             'device': 'python_client'
         },
-        'datatype': 'image',
-        'ext': 'jpg',
+        'datatype': datatype,
+        'ext': ext,
     }
     files = [
         ('json', ('json', json.dumps(api_payload), 'application/json')),
-        ('file', ('file', open(image_path, 'rb'), 'application/octet-stream')),
+        ('file', ('file', open(file_path, 'rb'), 'application/octet-stream')),
     ]
     try:
         r = requests.post(api_url, files=files)
@@ -83,4 +88,6 @@ if __name__ == '__main__':
     elif args.list_data:
         list_data(base_url, args.api_key)
     elif args.image_path:
-        upload_image(base_url, args.api_key, args.image_path)
+        upload_file(base_url, args.api_key, args.image_path, 'image')
+    elif args.mesh_path:
+        upload_file(base_url, args.api_key, args.mesh_path, 'mesh')
