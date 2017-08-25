@@ -45,20 +45,51 @@ Add the project to your Python path
 export PYTHONPATH=$PYTHONPATH:/path/to/SpatialServer
 ```
 
-##### Running the server
+Install MongoDB. Follow [Instructions here](https://docs.mongodb.com/manual/installation/). Use the default port and
+dbpath (/data/db).
+Make sure you can connect to it by running the mongo shell on the command line.
+
+
+Create the file system root directory. This is where the server will store
+files. The default is /data/spatial_fs, you can change this in hsm/config.py.
+```bash
+mkdir /data/spatial_fs
+```
+
+Make sure you have read/write access to the above 2 directories.
+
+##### Running the server (HTTP)
+```bash
+# From SpatialServer/hsm/http
+python3 rest_api.py
+```
+
+##### Running the Python client (HTTP)
+The http_client uses defaults found in hsm/config.py. Note the config_key is
+just decorative for now, it's not validated anywhere.
+```bash
+# From SpatialServer/hsm/http
+python3 http_client.py --list_data # Lists files stored on server.
+python3 http_client.py --mesh_path /path/to/file.obj # Send file.obj to server.
+python3 http_client.py --help # See other options
+```
+
+## Below is deprecated temporarily. Do not use.
+
+##### Running the server (TCP)
 ```bash
 # From SpatialServer/hsm/server
 python3 server.py
 ```
 
-##### Running the Python client
+##### Running the Python client (TCP)
 The currently the python client can only send images to the server. It is useful for testing purposes. There are some sample images in sample_image_data folder.
 ```bash
 # From SpatialServer/hsm/client
 python3 client.py <path to image file>
 ```
 
-##### Adding new methods to the API
+##### Adding new methods to the API (TCP)
 The API methods are defined in [hsm.proto](hsm/protos/hsm.proto). If you are not familiar, it would be useful to take a look at the [Protocol Buffers](https://developers.google.com/protocol-buffers/docs/pythontutorial) documentation.
 
 New method names are defined in
