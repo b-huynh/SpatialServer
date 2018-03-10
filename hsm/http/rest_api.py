@@ -5,7 +5,7 @@ from hsm.http import validation
 from hsm.http.endpoints import data_endpoint
 from hsm.http.endpoints import users_endpoint
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.register_blueprint(data_endpoint.data_endpoint)
 app.register_blueprint(users_endpoint.users_endpoint)
 

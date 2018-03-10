@@ -1,5 +1,11 @@
+*~
+
 # JetBrains IDE
 .idea/
+
+# SFM Data
+/hsm/sfm/sfm_data/
+/hsm/http/static/sfm/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
