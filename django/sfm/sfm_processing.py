@@ -11,8 +11,10 @@ class SfmProcessor:
         self.potree_executable = potree_executable
         self.converted_dir = os.path.join(sfm_dest, 'converted')
         self.model_dir = os.path.join(sfm_dest, 'sparse')
+        self.dense_model_dir = os.path.join(sfm_dest, 'dense')
         self.ply_file_name = 'points.ply'
         self.las_file_name = 'points.las'
+        self.dense_ply_file_name = 'fused.ply'
 
     def run_colmap(self, use_gpu=True):
         args = [
@@ -87,6 +89,35 @@ class SfmProcessor:
             print(bytes.decode(err.output))
             raise err
 
+    def convert_dense_ply_file(self):
+        if not os.path.exists(self.dense_model_dir):
+            mess = 'Error in colmap conversion. Dense model source directory does not exist.'
+            print(mess)
+            raise IOError(mess)
+
+        if not os.path.exists(self.converted_dir):
+            os.makedirs(self.converted_dir)
+
+        subdir = sorted(os.listdir(self.dense_model_dir))[-1]
+        latest_model_dir = os.path.join(self.dense_model_dir, subdir)
+        ply_file = os.path.join(latest_model_dir, self.dense_ply_file_name)
+
+        las_file = os.path.join(self.converted_dir, self.las_file_name)
+        args = [
+            'pdal',
+            'translate',
+            ply_file,
+            las_file
+        ]
+
+        try:
+            output = subprocess.check_output(args, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as err:
+            print('Error running pdal model converter on dense ply file:', err.returncode)
+            print(bytes.decode(err.output))
+            raise err
+
+
     def run_potree_convert(self):
         if not os.path.exists(self.html_dest):
             mess = 'Error in potree conversion. HTML destination directory does not exist.'
@@ -102,7 +133,6 @@ class SfmProcessor:
             '--generate-page',
             'view'
         ]
-        print(args)
 
         try:
             output = subprocess.check_output(args, stderr=subprocess.STDOUT)
@@ -110,7 +140,6 @@ class SfmProcessor:
             print('Error running potree converter:', err.returncode)
             print(bytes.decode(err.output))
             raise err
-
 
 
 def get_parser():
@@ -144,7 +173,8 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     if args.full_pipeline:
         if args.source_dir is not None and args.out_dir is not None:
-            processor = SfmProcessor(sfm_source=args.source_dir, sfm_dest=args.out_dir, html_dest=args.html_dir, potree_executable=args.potree_exec)
+            processor = SfmProcessor(sfm_source=args.source_dir, sfm_dest=args.out_dir, html_dest=args.html_dir,
+                                     potree_executable=args.potree_exec)
             processor.run_colmap()
             print('Finished Colmap reconstruction')
             processor.convert_point_cloud()
@@ -153,7 +183,8 @@ if __name__ == '__main__':
             processor.run_potree_convert()
             print('Finished HTML page generation with Potree')
         else:
-            print('Please provide source, model destination, and HTML destination directories as well as the location of the PotreeConverter executable.')
+            print(
+                'Please provide source, model destination, and HTML destination directories as well as the location of the PotreeConverter executable.')
     else:
         if args.run_colmap:
             if args.source_dir is not None and args.out_dir is not None:
@@ -179,9 +210,10 @@ if __name__ == '__main__':
                 print('Please provide model destination directory.')
         if args.run_potree:
             if args.out_dir is not None and args.html_dir is not None and args.potree_exec is not None:
-                processor = SfmProcessor(sfm_dest=args.out_dir, html_dest=args.html_dir, potree_executable=args.potree_exec)
+                processor = SfmProcessor(sfm_dest=args.out_dir, html_dest=args.html_dir,
+                                         potree_executable=args.potree_exec)
                 processor.run_potree_convert()
                 print('Finished HTML page generation with Potree')
             else:
-                print('Please provide model destination and HTML destination directories as well as the location of the PotreeConverter executable.')
-
+                print(
+                    'Please provide model destination and HTML destination directories as well as the location of the PotreeConverter executable.')

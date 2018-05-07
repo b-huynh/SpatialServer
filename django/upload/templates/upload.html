@@ -7,8 +7,10 @@
 <h2>Upload Zip File Here</h2>
 <form action="/upload/" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form }}
-    <input type="submit" value="Submit" />
+    <table>
+        {{ form }}
+    </table>
+    <input type="submit" value="Submit"/>
 </form>
 
 {% endblock %}
