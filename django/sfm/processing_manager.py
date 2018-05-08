@@ -9,13 +9,13 @@ from .sfm_processing import SfmProcessor
 potree_exec = '/home/jalexander/software/PotreeConverter/build/PotreeConverter/PotreeConverter'
 
 def unzip_and_process(filename, image_set):
-    working_dir = os.path.join('sfm_files', image_set.ident)
+    working_dir = image_set.get_working_dir()
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
-    img_dir = os.path.join(working_dir, 'img')
+    img_dir = image_set.get_img_dir()
 
     set_data = json.loads(image_set.data)
-    if set_data['status'] != 'uploaded':
+    if image_set.status != 'uploaded':
         return
 
     args = [
@@ -34,11 +34,10 @@ def unzip_and_process(filename, image_set):
         print(bytes.decode(err.output))
         return
 
-    set_data['status'] = 'unzipped'
-    image_set.data = json.dumps(set_data)
+    image_set.status = 'unzipped'
     image_set.save()
 
-    html_dir = os.path.join('potree', image_set.ident)
+    html_dir = image_set.get_html_dir()
 
     processor = SfmProcessor(sfm_source=img_dir, sfm_dest=working_dir, html_dest=html_dir,
                              potree_executable=potree_exec)
@@ -46,8 +45,7 @@ def unzip_and_process(filename, image_set):
     processor.run_colmap()
     print('Finished Colmap reconstruction')
 
-    set_data['status'] = 'reconstructed'
-    image_set.data = json.dumps(set_data)
+    image_set.status = 'reconstructed'
     image_set.save()
 
     if not os.path.exists(html_dir):
@@ -58,6 +56,8 @@ def unzip_and_process(filename, image_set):
     print('Finished model file conversion')
     processor.run_potree_convert()
     print('Finished HTML page generation with Potree')
+    image_set.status = 'potree'
+    image_set.save()
 
 
 def start_thread_processing_on_zip(filename, image_set):

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2>All Image Sets</h2>
+{% if image_sets %}
+    <table>
+        <tr>
+            <th>Identifier</th>
+            <th>Status</th>
+            <th>Uploaded</th>
+            <th>Potree Page</th>
+        </tr>
+        {% for image_set in image_sets %}
+            <tr>
+                <td>{{ image_set.ident }}</td>
+                <td>{{ image_set.status }}</td>
+                <td>{{ image_set.upload_date }}</td>
+                <td>
+                    {% if image_set.status == 'potree' %}
+                        <a href="/static/{{ image_set.ident }}/view.html">/static/{{ image_set.ident }}/view.html</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% endblock %}
