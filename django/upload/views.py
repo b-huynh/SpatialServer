@@ -13,6 +13,11 @@ def list(request):
     return render(request, 'list.html', {'image_sets': image_sets})
 
 
+def select(request):
+    image_sets = ImageSet.objects.all()
+    return render(request, 'select.html', {'image_sets': image_sets})
+
+
 def index(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)

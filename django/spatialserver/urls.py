@@ -22,7 +22,10 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    path('upload/', include('upload.urls')),
-    url('', views.index, name='index'),
-    url(r'^admin/', admin.site.urls),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+                  path('upload/', include('upload.urls')),
+                  path('register/<slug:ident1>/<slug:ident2>', views.register, name='register'),
+                  path('double/<slug:ident1>/<slug:ident2>', views.double, name='double'),
+                  path('potreereg/<slug:ident>', views.potree_reg, name='potree_reg'),
+                  url(r'potreereg/?$', views.potree_reg_def, name='potree_reg_def'),
+                  url(r'^admin/', admin.site.urls),
+              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

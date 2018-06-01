@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" type="text/css" href="/static/index.css">
+    <title>Spatial Server</title>
+</head>
+
+<body style="overflow: hidden">
+
+<div class='wrapper'>
+    <div class='container-left'>
+        <iframe src="/potreereg/{{ ident1 }}"></iframe>
+    </div>
+    <div class='container-right'>
+        <iframe src="/potreereg/{{ ident2 }}"></iframe>
+    </div>
+
+    <div class="bottom-overlay">
+        <button type="button" id="double_button" class="reg-button">View Together</button>
+    </div>
+</div>
+
+<script>
+    let but = document.getElementById("double_button");
+    but.onclick = function () {
+        window.location = "/double/{{ ident1 }}/{{ ident2 }}";
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2>All Image Sets</h2>
+
+{% if image_sets %}
+
+<p id="dup_warn" style="color: red;" hidden>Please select different point clouds</p>
+
+<label>Point Cloud 1: </label>
+<select id="pc1_select" name="pc1">
+    {% for image_set in image_sets %}
+    <option value="{{ image_set.ident }}">{{ image_set.ident }}</option>
+    {% endfor %}
+</select>
+<br/><br/>
+
+<label>Point Cloud 2: </label>
+<select id="pc2_select" name="pc2">
+    {% for image_set in image_sets %}
+        {% if image_set.status == 'potree' %}
+            <option value="{{ image_set.ident }}">{{ image_set.ident }}</option>
+        {% endif %}
+    {% endfor %}
+</select>
+<br/><br/>
+
+<button id="reg_button" type="button">Register</button>
+
+<script>
+    let select = document.getElementById("reg_button").onclick = function () {
+        let pc1 = document.getElementById("pc1_select");
+        let pc2 = document.getElementById("pc2_select");
+
+        let pc1_ident = pc1.options[pc1.selectedIndex].value;
+        let pc2_ident = pc2.options[pc2.selectedIndex].value;
+
+        console.log(pc1_ident);
+        console.log(pc2_ident);
+
+        if (pc1_ident == pc2_ident) {
+            warn = document.getElementById("dup_warn");
+            warn.style.display = "block";
+        }
+        else {
+            window.location = "/register/" + pc1_ident + "/" + pc2_ident;
+        }
+    }
+</script>
+
+{% endif %}
+
+{% endblock %}

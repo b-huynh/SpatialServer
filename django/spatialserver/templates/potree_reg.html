@@ -13,6 +13,7 @@
     <link rel="stylesheet" type="text/css" href="/static/libs/openlayers3/ol.css">
     <link rel="stylesheet" type="text/css" href="/static/libs/spectrum/spectrum.css">
     <link rel="stylesheet" type="text/css" href="/static/libs/jstree/themes/mixed/style.css">
+    <link rel="stylesheet" type="text/css" href="/static/index.css">
 </head>
 
 <body>
@@ -32,7 +33,6 @@
 <script src="/static/libs/plasio/js/laslaz.js"></script>
 
 <!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
-document.title = "";
 viewer.setEDLEnabled(false);
 viewer.setBackground("gradient"); // ["skybox", "gradient", "black", "white"];
 viewer.setDescription(``);
@@ -43,14 +43,6 @@ viewer.setDescription(``);
 </div>
 
 <script>
-
-    class PointPicker {
-        constructor(viewer) {
-            this.viewer = viewer;
-
-            this.measuringTool = new MeasuringTool(this.viewer);
-        }
-    }
 
     window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 
@@ -68,10 +60,15 @@ viewer.setDescription(``);
         $("#menu_appearance").next().show();
         $("#menu_tools").next().show();
         $("#menu_scene").next().show();
-        viewer.toggleSidebar();
     });
 
-    Potree.loadPointCloud("/static/arts-20180514-031331/pointclouds/view/cloud.js", "view", e => {
+    $("#potree_render_area").append(
+        '<div class="potree-overlay">' +
+        '<button type="button" id="start_button" class="reg-button">Choose Point</button>' +
+        '</div>'
+    );
+
+    Potree.loadPointCloud("/static/{{ ident }}/pointclouds/view/cloud.js", "view", e => {
         let pointcloud = e.pointcloud;
         let material = pointcloud.material;
         viewer.scene.addPointCloud(pointcloud);
@@ -82,7 +79,9 @@ viewer.setDescription(``);
         viewer.fitToScreen();
     });
 
-    setTimeout(function(){
+    currentPointIndex = 0;
+
+    function setupMeasure(callback) {
         let measuringTool = new Potree.MeasuringTool(viewer);
         let measurement = measuringTool.startInsertion({
             showDistances: false,
@@ -90,18 +89,35 @@ viewer.setDescription(``);
             showCoordinates: true,
             showArea: false,
             closed: true,
-            maxMarkers: 2,
+            maxMarkers: 1,
             name: 'Point'
         });
 
-        let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
-
         let mUpCallback = (e) => {
-            console.log(measurement.points[measurement.points.length - 1])
+            viewer.renderer.domElement.removeEventListener('mouseup', mUpCallback, true);
+            point = measurement.points[measurement.points.length - 1];
+            callback(point);
         };
 
         viewer.renderer.domElement.addEventListener('mouseup', mUpCallback, true);
-    }, 1000);
+    }
+
+    function completeCallback(point) {
+        if (currentPointIndex < 2) {
+            console.log("Index: " + currentPointIndex);
+            console.log(point);
+            currentPointIndex += 1;
+        }
+        else{
+            $("#start_button").prop('disabled', true);
+        }
+    }
+
+    $("#start_button").click(function () {
+        if (currentPointIndex <= 2) {
+            setupMeasure(completeCallback);
+        }
+    });
 
 </script>
 
