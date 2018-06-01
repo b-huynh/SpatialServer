@@ -62,9 +62,12 @@ viewer.setDescription(``);
         viewer.toggleSidebar();
     });
 
+    pc = {};
+
     Potree.loadPointCloud("/static/{{ ident1 }}/pointclouds/view/cloud.js", "{{ ident1 }}", e => {
         let pointcloud = e.pointcloud;
         let material = pointcloud.material;
+        pc = pointcloud;
         viewer.scene.addPointCloud(pointcloud);
         material.pointColorType = Potree.PointColorType.RGB; // any Potree.PointColorType.XXXX
         material.size = 1;
