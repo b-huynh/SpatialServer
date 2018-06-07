@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2>All Point Cloud Alignments</h2>
+{% if aligns %}
+    <table>
+        <tr>
+            <th>Point Cloud 1</th>
+            <th>Point Cloud 2</th>
+            <th>Type</th>
+            <th>Link</th>
+            <th>Matrix</th>
+            <th>Alignment Points for Cloud 1</th>
+            <th>Alignment Points for Cloud 2</th>
+            <th>Uploaded</th>
+        </tr>
+        {% for align in aligns %}
+            <tr>
+                <td>{{ align.ident1 }}</td>
+                <td>{{ align.ident2 }}</td>
+                <td>{{ align.type }}</td>
+                <td>
+                    <a href="/double/{{ align.ident1 }}/{{ align.ident2 }}/?mat={{ align.matrix }}">/double/{{ align.ident1 }}/{{ align.ident2 }}/?mat={{ align.matrix }}</a>
+                </td>
+                <td>{{ align.matrix }}</td>
+                <td>{{ align.points1 }}</td>
+                <td>{{ align.points2 }}</td>
+                <td>{{ align.upload_date }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+{% endblock %}

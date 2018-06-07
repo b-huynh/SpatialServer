@@ -11,7 +11,9 @@
 <label>Point Cloud 1: </label>
 <select id="pc1_select" name="pc1">
     {% for image_set in image_sets %}
-    <option value="{{ image_set.ident }}">{{ image_set.ident }}</option>
+        {% if image_set.status == 'potree' %}
+            <option value="{{ image_set.ident }}">{{ image_set.ident }}</option>
+        {% endif %}
     {% endfor %}
 </select>
 <br/><br/>

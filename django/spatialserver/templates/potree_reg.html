@@ -42,6 +42,8 @@ viewer.setDescription(``);
     <div id="potree_sidebar_container"></div>
 </div>
 
+<div id="point_data" hidden></div>
+
 <script>
 
     window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
@@ -80,6 +82,7 @@ viewer.setDescription(``);
     });
 
     currentPointIndex = 0;
+    selectedPoints = [];
 
     function setupMeasure(callback) {
         let measuringTool = new Potree.MeasuringTool(viewer);
@@ -95,7 +98,7 @@ viewer.setDescription(``);
 
         let mUpCallback = (e) => {
             viewer.renderer.domElement.removeEventListener('mouseup', mUpCallback, true);
-            point = measurement.points[measurement.points.length - 1];
+            let point = measurement.points[measurement.points.length - 1];
             callback(point);
         };
 
@@ -103,13 +106,14 @@ viewer.setDescription(``);
     }
 
     function completeCallback(point) {
+        selectedPoints.push([point.position.x, point.position.y, point.position.z]);
         if (currentPointIndex < 2) {
-            console.log("Index: " + currentPointIndex);
-            console.log(point);
             currentPointIndex += 1;
         }
-        else{
+        else if (currentPointIndex == 2) {
             $("#start_button").prop('disabled', true);
+            let data_element = document.getElementById("point_data");
+            data_element.innerHTML = JSON.stringify(selectedPoints);
         }
     }
 
