@@ -1,7 +1,8 @@
 import numpy as np
 import subprocess
 import json
-
+import math
+import random
 
 CPP_SIC_EXECUTABLE = "../registration/build/sic_test"
 
@@ -143,6 +144,23 @@ def calc_mean_error_with_mat(np_p1, np_p2, matrix):
     return error / len(np_p2)
 
 
+def calc_mat_mse(mat1, mat2):
+    mat1 = np.array(mat1)
+    mat2 = np.array(mat2)
+    diff = mat1 - mat2
+    return np.linalg.norm(diff)
+
+
+def get_rotation_matrix(tx, ty, tz):
+    tx, ty, tz
+
+    Rx = np.array([[1, 0, 0], [0, math.cos(tx), -math.sin(tx)], [0, math.sin(tx), math.cos(tx)]])
+    Ry = np.array([[math.cos(ty), 0, math.sin(ty)], [0, 1, 0], [-math.sin(ty), 0, math.cos(ty)]])
+    Rz = np.array([[math.cos(tz), -math.sin(tz), 0], [math.sin(tz), math.cos(tz), 0], [0, 0, 1]])
+
+    return np.dot(Rx, np.dot(Ry, Rz))
+
+
 def run_sic_test(img_set1_file, img_set2_file, points1, points2):
     starting_matrix = align(points1, points2)
 
@@ -161,31 +179,37 @@ def run_sic_test(img_set1_file, img_set2_file, points1, points2):
         np_p2_ideal[i] = np_ideal_matrix_inv.dot(np_p1[i])
         points2_ideal[i] = make_un_homogeneous(np_p2_ideal[i]).tolist()
 
-    rand_vecs = np.random.rand(3, 3)
-    for i in range(3):
-        rand_vecs[i] = rand_vecs[i] / np.linalg.norm(rand_vecs[i])
+    xtheta = math.pi * random.random() - math.pi
+    ytheta = math.pi * random.random() - math.pi
+    ztheta = math.pi * random.random() - math.pi
+    rand_trans = np.random.rand(3)
+    rand_trans = rand_trans / np.linalg.norm(rand_trans)
 
-    print("offset\tstarting_matrix\ticp_matrix\tinitial_error\titeration_error")
+    print("multiplier\trandom_matrix\tinitial_error\toutput_matrix\tfinal_error")
     for i in range(10):
-        offset_value = i * 0.1
-        print(str(offset_value) + '\t', end="")
+        multiplier = i * 0.1
+        rand_rot_mat = get_rotation_matrix(multiplier * xtheta,
+                                           multiplier * ytheta,
+                                           multiplier * ztheta)
+        rand_mat = np.zeros((4, 4))
+        rand_mat[3][3] = 1
+        for i in range(3):
+            for j in range(3):
+                rand_mat[i][j] = rand_rot_mat[i][j]
+            rand_mat[i][3] = rand_trans[i] * multiplier
 
-        np_mutated2 = np.array(points2_ideal) + (rand_vecs * offset_value)
+        print(str(multiplier) + '\t', end="")
+        print(json.dumps(rand_mat.tolist()) + '\t', end="")
 
-        np_mutated2_h = np.ones((3, 4))
-        for j in range(3):
-            np_mutated2_h[j] = make_homogeneous(np_mutated2[j])
+        rand_mat_inv = np.linalg.inv(rand_mat)
+        new_starting_matrix = rand_mat * np_ideal_matrix
 
-        mutated_starting_matrix = align(points1, np_mutated2.tolist())
-        print(json.dumps(mutated_starting_matrix) + '\t', end="")
-        initial_error = calc_mean_error_with_mat(np_p1, np_mutated2_h, mutated_starting_matrix)
-
-        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, mutated_starting_matrix, 1)
+        initial_error = calc_mat_mse(rand_mat_inv, np.identity(4))
+        print(str(initial_error) + '\t', end="")
+        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, new_starting_matrix, 1)
         print(json.dumps(matrix_attempt) + '\t', end="")
-        print(json.dumps(initial_error) + '\t', end="")
-
-        error = calc_mean_error_with_mat(np_p1, np_mutated2_h, matrix_attempt)
-        print(json.dumps(error) + '\t', end="")
+        final_error = calc_mat_mse(rand_mat_inv, matrix_attempt)
+        print(str(final_error) + '\t', end="")
         print()
 
 
@@ -194,10 +218,10 @@ if __name__ == "__main__":
     #            [[-0.65,-1.01,6.82], [-2.05,-0.82,-2.48], [2.7,-1.6,-0.67]])))
 
     run_sic_test("sfm_files/nano_building-20180507-021448/dense/0/fused.ply",
-                      "sfm_files/kirbydslr-20180605-072254/dense/0/fused.ply",
-                      [[-0.6403428688645363, -1.020506888628006, 6.8297353237867355],
-                       [-2.0502807423472404, -0.8205224201083183, -2.4808142259716988],
-                       [2.699486270546913, -1.600491352379322, -0.6708918809890747]],
-                      [[-2.5500783771276474, -1.5407080054283142, -3.5204269886016846],
-                       [3.569728910923004, -0.5307079553604126, 1.4693803489208221],
-                       [-0.45007848739624023, -0.9208309650421143, 3.0799418091773987]])
+                 "sfm_files/kirbydslr-20180605-072254/dense/0/fused.ply",
+                 [[-0.6403428688645363, -1.020506888628006, 6.8297353237867355],
+                  [-2.0502807423472404, -0.8205224201083183, -2.4808142259716988],
+                  [2.699486270546913, -1.600491352379322, -0.6708918809890747]],
+                 [[-2.5500783771276474, -1.5407080054283142, -3.5204269886016846],
+                  [3.569728910923004, -0.5307079553604126, 1.4693803489208221],
+                  [-0.45007848739624023, -0.9208309650421143, 3.0799418091773987]])
