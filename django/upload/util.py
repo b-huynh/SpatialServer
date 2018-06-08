@@ -1,8 +1,25 @@
 import numpy as np
 import subprocess
+import json
 
 
 CPP_SIC_EXECUTABLE = "../registration/build/sic_test"
+
+
+def make_homogeneous(vec):
+    res = np.ones(4)
+    res[0] = vec[0]
+    res[1] = vec[1]
+    res[2] = vec[2]
+    return res
+
+
+def make_un_homogeneous(vec):
+    res = np.zeros(3)
+    res[0] = vec[0]
+    res[1] = vec[1]
+    res[2] = vec[2]
+    return res
 
 
 def align(vs1, vs2):
@@ -99,12 +116,77 @@ def run_icp_alignment(img_set1_file, img_set2_file, starting_mat, iterations):
 
     result = output.decode("ascii").strip().split("\n")
 
-    print(result)
+    result_mat = []
+    mat_row = 0
+
+    for row in range(len(result) - 4, len(result)):
+        result_mat.append([])
+        row_str = list(filter(None, result[row].split(' ')))
+        for col in range(len(row_str)):
+            result_mat[mat_row].append(float(row_str[col]))
+        mat_row += 1
+
+    return result_mat
+
+
+def calc_mean_error_with_mat(np_p1, np_p2, matrix):
+    matrix = np.array(matrix)
+    trans_points = np.zeros((len(np_p2), 4))
+    for i in range(len(np_p2)):
+        trans_points[i] = matrix.dot(np_p2[i])
+
+    error = 0
+    for i in range(len(np_p2)):
+        error_vec = np_p1[i] - trans_points[i]
+        error += np.linalg.norm(error_vec)
+
+    return error / len(np_p2)
 
 
 def run_sic_test(img_set1_file, img_set2_file, points1, points2):
-    matrix = align(points1, points2)
-    run_icp_alignment(img_set1_file, img_set2_file, matrix, 1)
+    starting_matrix = align(points1, points2)
+
+    correction_matrix = run_icp_alignment(img_set1_file, img_set2_file, starting_matrix, 1)
+
+    np_starting_matrix = np.array(starting_matrix)
+    np_correction_matrix = np.array(correction_matrix)
+    np_ideal_matrix = np.matmul(np_correction_matrix, np_starting_matrix)
+    np_ideal_matrix_inv = np.linalg.inv(np_ideal_matrix)
+
+    np_p1 = np.zeros((3, 4))
+    np_p2_ideal = np.zeros((3, 4))
+    points2_ideal = [0, 0, 0]
+    for i in range(3):
+        np_p1[i] = make_homogeneous(points1[i])
+        np_p2_ideal[i] = np_ideal_matrix_inv.dot(np_p1[i])
+        points2_ideal[i] = make_un_homogeneous(np_p2_ideal[i]).tolist()
+
+    rand_vecs = np.random.rand(3, 3)
+    for i in range(3):
+        rand_vecs[i] = rand_vecs[i] / np.linalg.norm(rand_vecs[i])
+
+    print("offset\tstarting_matrix\ticp_matrix\tinitial_error\titeration_error")
+    for i in range(10):
+        offset_value = i * 0.1
+        print(str(offset_value) + '\t', end="")
+
+        np_mutated2 = np.array(points2_ideal) + (rand_vecs * offset_value)
+
+        np_mutated2_h = np.ones((3, 4))
+        for j in range(3):
+            np_mutated2_h[j] = make_homogeneous(np_mutated2[j])
+
+        mutated_starting_matrix = align(points1, np_mutated2.tolist())
+        print(json.dumps(mutated_starting_matrix) + '\t', end="")
+        initial_error = calc_mean_error_with_mat(np_p1, np_mutated2_h, mutated_starting_matrix)
+
+        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, mutated_starting_matrix, 1)
+        print(json.dumps(matrix_attempt) + '\t', end="")
+        print(json.dumps(initial_error) + '\t', end="")
+
+        error = calc_mean_error_with_mat(np_p1, np_mutated2_h, matrix_attempt)
+        print(json.dumps(error) + '\t', end="")
+        print()
 
 
 if __name__ == "__main__":
