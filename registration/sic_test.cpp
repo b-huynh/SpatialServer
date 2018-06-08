@@ -9,6 +9,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/console/time.h>   // TicToc
 #include <pcl/filters/uniform_sampling.h>
+#include <pcl/common/io.h>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ bool next_iteration = false;
 
 //const double FILTER_SIZE = 0.01;
 const double FILTER_SIZE = 1.0;
-const bool FILTER = true;
+bool FILTER = true;
 
 void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
                            void *nothing) {
@@ -105,9 +106,6 @@ int main(int argc,
     cout << "Loaded file " << argv[2] << " (" << cin2->size() << " points) in " << time.toc() << " ms"
          << endl;
 
-    PointCloudT c_cloud1;
-    PointCloudT c_cloud2;
-
     PointCloudT::Ptr cloud_in1(new PointCloudT);
     PointCloudT::Ptr cloud_in2(new PointCloudT);
 
@@ -115,17 +113,14 @@ int main(int argc,
         pcl::UniformSampling<PointT> sampler1;
         sampler1.setRadiusSearch(FILTER_SIZE);
         sampler1.setInputCloud(cin1);
-        sampler1.filter(c_cloud1);
-        std::cerr << "Point cloud 1 after filtering: " << c_cloud1.size() << "." << endl;
+        sampler1.filter(*cloud_in1);
+        std::cerr << "Point cloud 1 after filtering: " << cloud_in1->size() << "." << endl;
 
         pcl::UniformSampling<PointT> sampler2;
         sampler2.setRadiusSearch(FILTER_SIZE);
         sampler2.setInputCloud(cin2);
-        sampler2.filter(c_cloud2);
-        std::cerr << "Point cloud 2 after filtering: " << c_cloud2.size() << "." << endl;
-
-        *cloud_in1 = c_cloud1;
-        *cloud_in2 = c_cloud2;
+        sampler2.filter(*cloud_in2);
+        std::cerr << "Point cloud 2 after filtering: " << cloud_in2->size() << "." << endl;
     } else {
         *cloud_in1 = *cin1;
         *cloud_in2 = *cin2;
