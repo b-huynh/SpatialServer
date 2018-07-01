@@ -9,6 +9,9 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/console/time.h>   // TicToc
 #include <pcl/filters/uniform_sampling.h>
+#include <pcl/common/io.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/registration/icp.h>
 
 using namespace std;
 
@@ -18,7 +21,7 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 bool next_iteration = false;
 
 const double FILTER_SIZE = 0.01;
-const bool FILTER = false;
+bool FILTER = true;
 
 void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
                            void *nothing) {
@@ -124,108 +127,34 @@ int main(int argc,
 
     // The Iterative Closest Point algorithm
     time.tic();
-    pcl::IterativeClosestPoint<PointT, PointT> icp;
+    pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp;
     icp.setMaximumIterations(iterations);
     icp.setInputSource(cloud_in2);
     icp.setInputTarget(cloud_in1);
 
     cout << "Starting ICP" << endl;
 
-    icp.align(*cloud_in2);
+    PointCloudT::Ptr final_result(new PointCloudT);
+
+    icp.align(*final_result);
     icp.setMaximumIterations(1);  // We set this variable to 1 for the next time we will call .align () function
     cout << "Applied " << iterations << " ICP iteration(s) in " << (time.toc() / 1000.0) << " seconds"
          << endl;
 
+    /*
     if (icp.hasConverged()) {
         cout << "\nICP has converged, score is " << icp.getFitnessScore() << endl;
-        cout << "\nICP transformation " << iterations << " : cloud_in2 -> cloud_in1" << endl;
+        cout << "\nICP transformation " << iterations << " : cloud_icp -> cloud_in" << endl;
         transformation_matrix = icp.getFinalTransformation().cast<double>();
         cout << transformation_matrix << endl;
     } else {
         PCL_ERROR ("\nICP has not converged.\n");
         return (-1);
     }
+     */
+    transformation_matrix = icp.getFinalTransformation().cast<double>();
 
-    pcl::visualization::PCLVisualizer viewer("ICP demo");
-    // The color we will be using
-    float bckgr_gray_level = 0.0;  // Black
-    float txt_gray_lvl = 1.0 - bckgr_gray_level;
-    // ICP aligned point cloud is red
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_icp_color_h(cloud_in2, 180, 20, 20);
-    std::stringstream ss;
-    {
-        // Create two vertically separated viewports
-        int v1(0);
-        int v2(1);
-        viewer.createViewPort(0.0, 0.0, 0.5, 1.0, v1);
-        viewer.createViewPort(0.5, 0.0, 1.0, 1.0, v2);
+    cout << transformation_matrix << endl;
 
-        // Original point cloud is white
-        pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_in_color_h(cloud_in1, (int) 255 * txt_gray_lvl,
-                                                                                  (int) 255 * txt_gray_lvl,
-                                                                                  (int) 255 * txt_gray_lvl);
-        viewer.addPointCloud(cloud_in1, cloud_in_color_h, "cloud_in_v1", v1);
-        viewer.addPointCloud(cloud_in1, cloud_in_color_h, "cloud_in_v2", v2);
-
-        // Transformed point cloud is green
-        pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_tr_color_h(cloud_tr, 20, 180, 20);
-        viewer.addPointCloud(cloud_tr, cloud_tr_color_h, "cloud_tr_v1", v1);
-
-        viewer.addPointCloud(cloud_in2, cloud_icp_color_h, "cloud_icp_v2", v2);
-
-        // Adding text descriptions in each viewport
-        viewer.addText("White: Original point cloud 1\nGreen: Original point cloud 2", 10, 15, 16, txt_gray_lvl,
-                       txt_gray_lvl, txt_gray_lvl, "icp_info_1", v1);
-        viewer.addText("White: Original point cloud 1\nRed: ICP aligned point cloud 2", 10, 15, 16, txt_gray_lvl,
-                       txt_gray_lvl,
-                       txt_gray_lvl, "icp_info_2", v2);
-
-        ss << iterations;
-        std::string iterations_cnt = "ICP iterations = " + ss.str();
-        viewer.addText(iterations_cnt, 10, 60, 16, txt_gray_lvl, txt_gray_lvl, txt_gray_lvl, "iterations_cnt", v2);
-
-        // Set background color
-        viewer.setBackgroundColor(bckgr_gray_level, bckgr_gray_level, bckgr_gray_level, v1);
-        viewer.setBackgroundColor(bckgr_gray_level, bckgr_gray_level, bckgr_gray_level, v2);
-
-        // Set camera position and orientation
-        viewer.setCameraPosition(-3.68332, 2.94092, 5.71266, 0.289847, 0.921947, -0.256907, 0);
-        viewer.setSize(1280, 1024);  // Visualiser window size
-
-        // Register keyboard callback :
-        viewer.registerKeyboardCallback(&keyboardEventOccurred, (void *) NULL);
-    }
-
-    // Display the visualiser
-    while (!viewer.wasStopped()) {
-        viewer.spinOnce();
-
-        // The user pressed "space" :
-        if (next_iteration) {
-            // The Iterative Closest Point algorithm
-            time.tic();
-            icp.align(*cloud_in2);
-            std::cout << "Applied 1 ICP iteration in " << time.toc() << " ms" << std::endl;
-
-            if (icp.hasConverged()) {
-                printf("\033[11A");  // Go up 11 lines in terminal output.
-                printf("\nICP has converged, score is %+.0e\n", icp.getFitnessScore());
-                std::cout << "\nICP transformation " << ++iterations << " : cloud_in2 -> cloud_in1" << std::endl;
-                transformation_matrix *= icp.getFinalTransformation().cast<double>();  // WARNING /!\ This is not accurate! For "educational" purpose only!
-                cout << transformation_matrix << endl;  // Print the transformation between original pose and current pose
-
-                ss.str("");
-                ss << iterations;
-                std::string iterations_cnt = "ICP iterations = " + ss.str();
-                viewer.updateText(iterations_cnt, 10, 60, 16, txt_gray_lvl, txt_gray_lvl, txt_gray_lvl,
-                                  "iterations_cnt");
-                viewer.updatePointCloud(cloud_in2, cloud_icp_color_h, "cloud_icp_v2");
-            } else {
-                PCL_ERROR ("\nICP has not converged.\n");
-                return (-1);
-            }
-        }
-        next_iteration = false;
-    }
     return (0);
 }

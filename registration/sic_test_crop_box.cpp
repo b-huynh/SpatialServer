@@ -9,6 +9,9 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/console/time.h>   // TicToc
 #include <pcl/filters/uniform_sampling.h>
+#include <pcl/filters/crop_box.h>
+#include <pcl/common/io.h>
+#include <pcl/registration/gicp.h>
 
 using namespace std;
 
@@ -18,7 +21,7 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 bool next_iteration = false;
 
 const double FILTER_SIZE = 0.01;
-const bool FILTER = false;
+bool FILTER = true;
 
 void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
                            void *nothing) {
@@ -58,26 +61,44 @@ int main(int argc,
     // Define initial transformation matrix
     Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity();
 
-    if (argc > 4) {
-        // If the user provided a matrix to transform point cloud 2
-        if (argc != 20) {
-            printf("Transformation matrix must have 16 elements. %d provided", argc - 4);
-            PCL_ERROR("Invalid transform matrix.\n");
-            return -1;
-        }
+    // The user provides a matrix to transform point cloud 2
 
-        int matrixStart = 4;
+    int matrixStart = 4;
 
-        transformation_matrix << stod(argv[matrixStart + 0]), stod(argv[matrixStart + 1]), stod(
-                argv[matrixStart + 2]), stod(argv[matrixStart + 3]),
-                stod(argv[matrixStart + 4]), stod(argv[matrixStart + 5]), stod(argv[matrixStart + 6]), stod(
-                argv[matrixStart + 7]),
-                stod(argv[matrixStart + 8]), stod(argv[matrixStart + 9]), stod(argv[matrixStart + 10]), stod(
-                argv[matrixStart + 11]),
-                stod(argv[matrixStart + 12]), stod(argv[matrixStart + 13]), stod(argv[matrixStart + 14]), stod(
-                argv[matrixStart + 15]);
+    transformation_matrix << stof(argv[matrixStart + 0]), stof(argv[matrixStart + 1]), stof(
+            argv[matrixStart + 2]), stof(argv[matrixStart + 3]),
+            stof(argv[matrixStart + 4]), stof(argv[matrixStart + 5]), stof(argv[matrixStart + 6]), stof(
+            argv[matrixStart + 7]),
+            stof(argv[matrixStart + 8]), stof(argv[matrixStart + 9]), stof(argv[matrixStart + 10]), stof(
+            argv[matrixStart + 11]),
+            stof(argv[matrixStart + 12]), stof(argv[matrixStart + 13]), stof(argv[matrixStart + 14]), stof(
+            argv[matrixStart + 15]);
 
-        cout << "Using transformation matrix:\n" << transformation_matrix << endl;
+    cout << "Using transformation matrix:\n" << transformation_matrix << endl;
+
+    Eigen::Vector4f points1[3];
+    Eigen::Vector4f points2[3];
+
+    int start = 20;
+    for (int i = 0; i < 3; i++) {
+        points1[i] << stof(argv[start + 3 * i + 0]),
+                stof(argv[start + 3 * i + 1]),
+                stof(argv[start + 3 * i + 2]), 1.0f;
+    }
+    start = 29;
+    for (int i = 0; i < 3; i++) {
+        points2[i] << stof(argv[start + 3 * i + 0]),
+                stof(argv[start + 3 * i + 1]),
+                stof(argv[start + 3 * i + 2]), 1.0f;
+    }
+
+    cout << "\nUsing points1:" << endl;
+    for (int i = 0; i < 3; i++) {
+        cout << "[" << points1[i] << "]" << endl;
+    }
+    cout << "\nUsing points2:" << endl;
+    for (int i = 0; i < 3; i++) {
+        cout << "[" << points2[i] << "]" << endl;
     }
 
     pcl::console::TicToc time;
@@ -97,54 +118,127 @@ int main(int argc,
     cout << "Loaded file " << argv[2] << " (" << cin2->size() << " points) in " << time.toc() << " ms"
          << endl;
 
-    PointCloudT::Ptr cloud_in1(new PointCloudT);
-    PointCloudT::Ptr cloud_in2(new PointCloudT);
+    PointCloudT::Ptr filter_out1(new PointCloudT);
+    PointCloudT::Ptr filter_out2(new PointCloudT);
 
     if (FILTER) {
         pcl::UniformSampling<PointT> sampler1;
         sampler1.setRadiusSearch(FILTER_SIZE);
         sampler1.setInputCloud(cin1);
-        sampler1.filter(*cloud_in1);
-        std::cerr << "Point cloud 1 after filtering: " << cloud_in1->size() << "." << endl;
+        sampler1.filter(*filter_out1);
+        std::cerr << "Point cloud 1 size after filtering: " << filter_out1->size() << endl;
 
         pcl::UniformSampling<PointT> sampler2;
         sampler2.setRadiusSearch(FILTER_SIZE);
         sampler2.setInputCloud(cin2);
-        sampler2.filter(*cloud_in2);
-        std::cerr << "Point cloud 2 after filtering: " << cloud_in2->size() << "." << endl;
+        sampler2.filter(*filter_out2);
+        std::cerr << "Point cloud 2 size after filtering: " << filter_out2->size() << endl;
     } else {
-        *cloud_in1 = *cin1;
-        *cloud_in2 = *cin2;
+        *filter_out1 = *cin1;
+        *filter_out2 = *cin2;
     }
 
     // Transform second point cloud with provided matrix
-    *cloud_tr = *cloud_in2;
-    pcl::transformPointCloud(*cloud_tr, *cloud_in2, transformation_matrix);
+    *cloud_tr = *filter_out2;
+    pcl::transformPointCloud(*cloud_tr, *filter_out2, transformation_matrix);
+
+    for(int i = 0; i < 3; i++){
+        points2[i] = transformation_matrix.cast<float>() * points2[i];
+    }
+
+    Eigen::Vector4f min1 = points1[0];
+    Eigen::Vector4f max1 = points1[0];
+    Eigen::Vector4f min2 = points2[0];
+    Eigen::Vector4f max2 = points2[0];
+
+    min1(3) = 1.0f;
+    max1(3) = 1.0f;
+    min2(3) = 1.0f;
+    max2(3) = 1.0f;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (points1[i](j) < min1(j)) {
+                min1(j) = points1[i](j);
+            }
+            if (points1[i](j) > max1(j)) {
+                max1(j) = points1[i](j);
+            }
+            if (points2[i](j) < min2(j)) {
+                min2(j) = points2[i](j);
+            }
+            if (points2[i](j) > max2(j)) {
+                max2(j) = points2[i](j);
+            }
+        }
+    }
+
+    float box_expand = 0.5f;
+    for (int i = 0; i < 3; i++) {
+        min1(i) -= box_expand;
+        max1(i) += box_expand;
+        min2(i) -= box_expand;
+        max2(i) += box_expand;
+    }
+
+    cout << "\nmin1:\n[" << min1 << "]" << endl;
+    cout << "max1:\n[" << max1 << "]" << endl;
+    cout << "min2:\n[" << min2 << "]" << endl;
+    cout << "max2:\n[" << max2 << "]" << endl;
+
+    PointCloudT::Ptr cloud_in1(new PointCloudT);
+    PointCloudT::Ptr cloud_in2(new PointCloudT);
+
+    for(PointCloudT::iterator it = filter_out1->begin(); it != filter_out1->end(); it++){
+        if(it->x > min1(0) && it->y > min1(1) && it->z > min1(2) &&
+           it->x < max1(0) && it->y < max1(1) && it->z < max1(2)){
+            cloud_in1->push_back(PointT(it->x, it->y, it->z));
+        }
+    }
+    std::cerr << "Point cloud 1 size after crop box: " << cloud_in1->size() << endl;
+
+    for(PointCloudT::iterator it = filter_out2->begin(); it != filter_out2->end(); it++){
+        if(it->x > min2(0) && it->y > min2(1) && it->z > min2(2) &&
+           it->x < max2(0) && it->y < max2(1) && it->z < max2(2)){
+            cloud_in2->push_back(PointT(it->x, it->y, it->z));
+        }
+    }
+    std::cerr << "Point cloud 2 size after crop box: " << cloud_in2->size() << endl;
+
     *cloud_tr = *cloud_in2;
 
     // The Iterative Closest Point algorithm
     time.tic();
-    pcl::IterativeClosestPoint<PointT, PointT> icp;
+    pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp;
     icp.setMaximumIterations(iterations);
     icp.setInputSource(cloud_in2);
     icp.setInputTarget(cloud_in1);
 
     cout << "Starting ICP" << endl;
 
-    icp.align(*cloud_in2);
+    PointCloudT::Ptr final_result(new PointCloudT);
+
+    icp.align(*final_result);
     icp.setMaximumIterations(1);  // We set this variable to 1 for the next time we will call .align () function
     cout << "Applied " << iterations << " ICP iteration(s) in " << (time.toc() / 1000.0) << " seconds"
          << endl;
 
+    /*
     if (icp.hasConverged()) {
         cout << "\nICP has converged, score is " << icp.getFitnessScore() << endl;
-        cout << "\nICP transformation " << iterations << " : cloud_in2 -> cloud_in1" << endl;
+        cout << "\nICP transformation " << iterations << " : cloud_icp -> cloud_in" << endl;
         transformation_matrix = icp.getFinalTransformation().cast<double>();
         cout << transformation_matrix << endl;
     } else {
         PCL_ERROR ("\nICP has not converged.\n");
         return (-1);
     }
+     */
+    transformation_matrix = icp.getFinalTransformation().cast<double>();
+
+    cout << transformation_matrix << endl;
+
+    return 0;
 
     pcl::visualization::PCLVisualizer viewer("ICP demo");
     // The color we will be using
@@ -171,7 +265,7 @@ int main(int argc,
         pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_tr_color_h(cloud_tr, 20, 180, 20);
         viewer.addPointCloud(cloud_tr, cloud_tr_color_h, "cloud_tr_v1", v1);
 
-        viewer.addPointCloud(cloud_in2, cloud_icp_color_h, "cloud_icp_v2", v2);
+        viewer.addPointCloud(final_result, cloud_icp_color_h, "cloud_icp_v2", v2);
 
         // Adding text descriptions in each viewport
         viewer.addText("White: Original point cloud 1\nGreen: Original point cloud 2", 10, 15, 16, txt_gray_lvl,
@@ -204,7 +298,7 @@ int main(int argc,
         if (next_iteration) {
             // The Iterative Closest Point algorithm
             time.tic();
-            icp.align(*cloud_in2);
+            icp.align(*final_result);
             std::cout << "Applied 1 ICP iteration in " << time.toc() << " ms" << std::endl;
 
             if (icp.hasConverged()) {
@@ -219,7 +313,7 @@ int main(int argc,
                 std::string iterations_cnt = "ICP iterations = " + ss.str();
                 viewer.updateText(iterations_cnt, 10, 60, 16, txt_gray_lvl, txt_gray_lvl, txt_gray_lvl,
                                   "iterations_cnt");
-                viewer.updatePointCloud(cloud_in2, cloud_icp_color_h, "cloud_icp_v2");
+                viewer.updatePointCloud(final_result, cloud_icp_color_h, "cloud_icp_v2");
             } else {
                 PCL_ERROR ("\nICP has not converged.\n");
                 return (-1);
@@ -227,5 +321,6 @@ int main(int argc,
         }
         next_iteration = false;
     }
+
     return (0);
 }

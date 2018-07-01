@@ -4,7 +4,10 @@ import json
 import math
 import random
 
-CPP_SIC_EXECUTABLE = "../registration/build/sic_test"
+CPP_EXECUTABLES = ["../registration/build_const/sic_test_general",
+                   "../registration/build_const/sic_test",
+                   "../registration/build_const/sic_test_normal",
+                   "../registration/build_const/sic_test_crop_box"]
 
 
 def make_homogeneous(vec):
@@ -92,12 +95,13 @@ def align(vs1, vs2):
     return result.tolist()
 
 
-def run_icp_alignment(img_set1_file, img_set2_file, starting_mat, iterations):
+def run_icp_alignment(img_set1_file, img_set2_file, starting_mat, iterations, executable, include_points, points1,
+                      points2):
     ply_file_1 = img_set1_file
     ply_file_2 = img_set2_file
 
     args = [
-        CPP_SIC_EXECUTABLE,
+        executable,
         ply_file_1,
         ply_file_2,
         str(iterations)
@@ -107,18 +111,31 @@ def run_icp_alignment(img_set1_file, img_set2_file, starting_mat, iterations):
         for x in vec:
             args.append(str(x))
 
+    if include_points:
+        for vec in points1:
+            for x in vec:
+                args.append(str(x))
+        for vec in points2:
+            for x in vec:
+                args.append(str(x))
+
+    args.append(";")
+    args.append("exit")
+    args.append("0")
     output = ""
     try:
-        output = subprocess.check_output(args, stderr=subprocess.STDOUT)
+        output = subprocess.check_output(" ".join(args), shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as err:
-        print('Error running sic testing executable:', err.returncode)
-        print(bytes.decode(err.output))
-        raise err
+        me = ":("
+    # this is expected to error because of an unavoidable segfault
 
     result = output.decode("ascii").strip().split("\n")
 
     result_mat = []
     mat_row = 0
+
+    if 'egmentation' in result[-1]:
+        result.pop()
 
     for row in range(len(result) - 4, len(result)):
         result_mat.append([])
@@ -161,14 +178,24 @@ def get_rotation_matrix(tx, ty, tz):
     return np.dot(Rx, np.dot(Ry, Rz))
 
 
-def run_sic_test(img_set1_file, img_set2_file, points1, points2):
+def run_sic_test(img_set1_file, img_set2_file, points1, points2,
+                 executable, include_points,
+                 xtheta, ytheta, ztheta, rand_trans):
     starting_matrix = align(points1, points2)
 
-    correction_matrix = run_icp_alignment(img_set1_file, img_set2_file, starting_matrix, 1)
+    iterations = 40
+
+    correction_matrix = [[1, 0, 0, 0],
+                         [0, 1, 0, 0],
+                         [0, 0, 1, 0],
+                         [0, 0, 0, 1], ]
 
     np_starting_matrix = np.array(starting_matrix)
     np_correction_matrix = np.array(correction_matrix)
     np_ideal_matrix = np.matmul(np_correction_matrix, np_starting_matrix)
+
+    """""
+    Unused
     np_ideal_matrix_inv = np.linalg.inv(np_ideal_matrix)
 
     np_p1 = np.zeros((3, 4))
@@ -178,15 +205,11 @@ def run_sic_test(img_set1_file, img_set2_file, points1, points2):
         np_p1[i] = make_homogeneous(points1[i])
         np_p2_ideal[i] = np_ideal_matrix_inv.dot(np_p1[i])
         points2_ideal[i] = make_un_homogeneous(np_p2_ideal[i]).tolist()
+    """""
 
-    xtheta = math.pi * random.random() - math.pi
-    ytheta = math.pi * random.random() - math.pi
-    ztheta = math.pi * random.random() - math.pi
-    rand_trans = np.random.rand(3)
-    rand_trans = rand_trans / np.linalg.norm(rand_trans)
-
-    print("multiplier\trandom_matrix\tinitial_error\toutput_matrix\tfinal_error")
-    for i in range(10):
+    print(
+        "executable\titerations\tfile_name_1\tfile_name_2\tmultiplier\trandom_matrix\toutput_matrix\trm_full\tom_full\tinitial_error\tfinal_error")
+    for i in range(11):
         multiplier = i * 0.1
         rand_rot_mat = get_rotation_matrix(multiplier * xtheta,
                                            multiplier * ytheta,
@@ -198,25 +221,61 @@ def run_sic_test(img_set1_file, img_set2_file, points1, points2):
                 rand_mat[i][j] = rand_rot_mat[i][j]
             rand_mat[i][3] = rand_trans[i] * multiplier
 
+        print(executable + '\t', end="")
+        print(str(iterations) + '\t', end="")
+        print(img_set1_file + '\t', end="")
+        print(img_set2_file + '\t', end="")
         print(str(multiplier) + '\t', end="")
         print(json.dumps(rand_mat.tolist()) + '\t', end="")
 
         rand_mat_inv = np.linalg.inv(rand_mat)
-        new_starting_matrix = rand_mat * np_ideal_matrix
+        new_starting_matrix = np.matmul(rand_mat, np_ideal_matrix)
 
         initial_error = calc_mat_mse(rand_mat_inv, np.identity(4))
-        print(str(initial_error) + '\t', end="")
-        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, new_starting_matrix, 1)
+        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, new_starting_matrix.tolist(),
+                                           iterations, executable, include_points, points1, points2)
+        np_matrix_attempt = np.array(matrix_attempt)
+
         print(json.dumps(matrix_attempt) + '\t', end="")
+        print(json.dumps(new_starting_matrix.tolist()) + '\t', end="")
+        print(json.dumps(np.matmul(np_matrix_attempt, new_starting_matrix).tolist()) + '\t', end="")
+
+        print(str(initial_error) + '\t', end="")
         final_error = calc_mat_mse(rand_mat_inv, matrix_attempt)
         print(str(final_error) + '\t', end="")
         print()
+
+
+def run_full_test(img_set1_file, img_set2_file, points1, points2):
+    xtheta = (math.pi * random.random() - math.pi / 2) / 2
+    ytheta = (math.pi * random.random() - math.pi / 2) / 2
+    ztheta = (math.pi * random.random() - math.pi / 2) / 2
+    rand_trans = np.random.rand(3)
+    rand_trans = rand_trans / np.linalg.norm(rand_trans)
+    rand_trans = rand_trans * 5
+
+    for ex in CPP_EXECUTABLES:
+        include_points = "crop_box" in ex
+        run_sic_test(img_set1_file, img_set2_file, points1, points2,
+                     ex, include_points,
+                     xtheta, ytheta, ztheta, rand_trans)
 
 
 if __name__ == "__main__":
     # print(json.dumps(align([[1.83,-0.69,5.18], [-3.26,-0.54,-1.10], [0.99,-1.58,-1.74]],
     #            [[-0.65,-1.01,6.82], [-2.05,-0.82,-2.48], [2.7,-1.6,-0.67]])))
 
+    """""
+    run_sic_test("sfm_files/kirbydslr-20180605-072254/dense/0/fused.ply",
+                 "sfm_files/nano_building-20180507-021448/dense/0/fused.ply",
+                 [[-2.790201187133789, -1.250707983970642, -0.21030402183532715],
+                  [-1.790297657251358, -1.7404887080192566, -4.030646208673716],
+                  [3.519728906452656, -0.11014655232429504, 1.4693803489208221]],
+                 [[2.1895484030246735, -1.3604447543621063, 4.099859583191574],
+                  [-1.7302962839603424, -1.1705068796873093, 6.719735324382782],
+                  [-1.960280753672123, -0.3205534815788269, -2.5108142271637917]])
+    """""
+    """""
     run_sic_test("sfm_files/nano_building-20180507-021448/dense/0/fused.ply",
                  "sfm_files/kirbydslr-20180605-072254/dense/0/fused.ply",
                  [[-0.6403428688645363, -1.020506888628006, 6.8297353237867355],
@@ -225,3 +284,26 @@ if __name__ == "__main__":
                  [[-2.5500783771276474, -1.5407080054283142, -3.5204269886016846],
                   [3.569728910923004, -0.5307079553604126, 1.4693803489208221],
                   [-0.45007848739624023, -0.9208309650421143, 3.0799418091773987]])
+    """""
+
+    """"""
+    run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  "sfm_files/arts-20180514-031331/dense/0/fused.ply",
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]],
+                  [[0.41922062635421753, -1.3604117631912231, 4.25939767062664],
+                   [7.029585599899292, -2.390230119228363, -2.150967299938202],
+                   [0.6292206645011902, -0.030775129795074463, -4.300422310829163]])
+    """"""
+
+    """""
+    run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  "sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]],
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]])
+    """""

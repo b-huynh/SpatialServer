@@ -10,6 +10,8 @@
 #include <pcl/console/time.h>   // TicToc
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/common/io.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/registration/icp.h>
 
 using namespace std;
 
@@ -18,8 +20,7 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 
 bool next_iteration = false;
 
-//const double FILTER_SIZE = 0.01;
-const double FILTER_SIZE = 1.0;
+const double FILTER_SIZE = 0.01;
 bool FILTER = true;
 
 void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
@@ -30,13 +31,6 @@ void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
     } else {
         cout << event.getKeySym() << endl;
     }
-}
-
-void printMatrix(Eigen::Matrix4d mat) {
-    cout << mat(0, 0) << mat(0, 1) << mat(0, 2) << mat(0, 3)
-         << mat(1, 0) << mat(1, 1) << mat(1, 2) << mat(1, 3)
-         << mat(2, 0) << mat(2, 1) << mat(2, 2) << mat(2, 3)
-         << mat(3, 0) << mat(3, 1) << mat(3, 2) << mat(3, 3);
 }
 
 int main(int argc,
@@ -126,8 +120,6 @@ int main(int argc,
         *cloud_in2 = *cin2;
     }
 
-    return 0;
-
     // Transform second point cloud with provided matrix
     *cloud_tr = *cloud_in2;
     pcl::transformPointCloud(*cloud_tr, *cloud_in2, transformation_matrix);
@@ -142,7 +134,9 @@ int main(int argc,
 
     cout << "Starting ICP" << endl;
 
-    icp.align(*cloud_in2);
+    PointCloudT::Ptr final_result(new PointCloudT);
+
+    icp.align(*final_result);
     icp.setMaximumIterations(1);  // We set this variable to 1 for the next time we will call .align () function
     cout << "Applied " << iterations << " ICP iteration(s) in " << (time.toc() / 1000.0) << " seconds"
          << endl;
