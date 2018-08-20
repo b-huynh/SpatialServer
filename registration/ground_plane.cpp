@@ -1,17 +1,15 @@
-#include <iostream>
-#include <string>
-
-#include <unistd.h>
-
 #include <pcl/io/ply_io.h>
+#include <iostream>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-#include <pcl/registration/icp.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/console/time.h>   // TicToc
-#include <pcl/filters/uniform_sampling.h>
-#include <pcl/common/io.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
+#include <pcl/filters/uniform_sampling.h>
+#include <pcl/console/time.h>   // TicToc
 
 using namespace std;
 
@@ -20,21 +18,12 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 
 bool next_iteration = false;
 
+const double DISTANCE_THRESHOLD = 0.3;
+
 const double FILTER_SIZE = 0.01;
 bool FILTER = true;
 
-void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event,
-                           void *nothing) {
-    if (event.getKeySym() == "space" && event.keyDown()) {
-        cout << "Starting next iteration" << endl;
-        next_iteration = true;
-    } else {
-        cout << event.getKeySym() << endl;
-    }
-}
-
-int main(int argc,
-         char *argv[]) {
+int main(int argc, char **argv) {
     // The point clouds we will be using
     PointCloudT::Ptr cin1(new PointCloudT);  // Input point cloud1
     PointCloudT::Ptr cin2(new PointCloudT);  // Input point cloud1
@@ -43,19 +32,9 @@ int main(int argc,
     // Checking program arguments
     if (argc < 3) {
         printf("Usage :\n");
-        printf("\t\t%s file1.ply file2.ply [number_of_ICP_iterations]\n", argv[0]);
+        printf("\t\t%s file1.ply file2.ply\n", argv[0]);
         PCL_ERROR ("Provide two ply files.\n");
         return (-1);
-    }
-
-    int iterations = 1;  // Default number of ICP iterations
-    if (argc > 3) {
-        // If the user passed the number of iteration as an argument
-        iterations = atoi(argv[3]);
-        if (iterations < 1) {
-            PCL_ERROR ("Number of initial iterations must be >= 1\n");
-            return (-1);
-        }
     }
 
     // Define initial transformation matrix
@@ -69,7 +48,7 @@ int main(int argc,
             return -1;
         }
 
-        int matrixStart = 4;
+        int matrixStart = 3;
 
         transformation_matrix << stod(argv[matrixStart + 0]), stod(argv[matrixStart + 1]), stod(
                 argv[matrixStart + 2]), stod(argv[matrixStart + 3]),
@@ -120,41 +99,70 @@ int main(int argc,
         *cloud_in2 = *cin2;
     }
 
-    // Transform second point cloud with provided matrix
-    *cloud_tr = *cloud_in2;
-    pcl::transformPointCloud(*cloud_tr, *cloud_in2, transformation_matrix);
-    *cloud_tr = *cloud_in2;
+    pcl::ModelCoefficients::Ptr coefficients1(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers1(new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<PointT> seg1;
+    // Optional
+    seg1.setOptimizeCoefficients(true);
+    // Mandatory
+    seg1.setModelType(pcl::SACMODEL_PLANE);
+    seg1.setMethodType(pcl::SAC_RANSAC);
+    seg1.setDistanceThreshold(DISTANCE_THRESHOLD);
+    seg1.setInputCloud(cin1);
+    seg1.segment(*inliers1, *coefficients1);
 
-    // The Iterative Closest Point algorithm
-    time.tic();
-    pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp;
-    icp.setMaximumIterations(iterations);
-    icp.setInputSource(cloud_in2);
-    icp.setInputTarget(cloud_in1);
 
-    cout << "Starting ICP" << endl;
+    pcl::ModelCoefficients::Ptr coefficients2(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers2(new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<PointT> seg2;
+    // Optional
+    seg2.setOptimizeCoefficients(true);
+    // Mandatory
+    seg2.setModelType(pcl::SACMODEL_PLANE);
+    seg2.setMethodType(pcl::SAC_RANSAC);
+    seg2.setDistanceThreshold(DISTANCE_THRESHOLD);
+    seg2.setInputCloud(cin2);
+    seg2.segment(*inliers2, *coefficients2);
 
-    PointCloudT::Ptr final_result(new PointCloudT);
-
-    icp.align(*final_result);
-    icp.setMaximumIterations(1);  // We set this variable to 1 for the next time we will call .align () function
-    cout << "Applied " << iterations << " ICP iteration(s) in " << (time.toc() / 1000.0) << " seconds"
-         << endl;
-
-    /*
-    if (icp.hasConverged()) {
-        cout << "\nICP has converged, score is " << icp.getFitnessScore() << endl;
-        cout << "\nICP transformation " << iterations << " : cloud_icp -> cloud_in" << endl;
-        transformation_matrix = icp.getFinalTransformation().cast<double>();
-        cout << transformation_matrix << endl;
-    } else {
-        PCL_ERROR ("\nICP has not converged.\n");
+    if (inliers1->indices.size() == 0) {
+        PCL_ERROR ("Could not estimate a planar model for dataset 1.");
         return (-1);
     }
-     */
-    transformation_matrix = icp.getFinalTransformation().cast<double>();
 
-    cout << transformation_matrix << endl;
+    if (inliers2->indices.size() == 0) {
+        PCL_ERROR ("Could not estimate a planar model for dataset 2.");
+        return (-1);
+    }
+
+    std::cerr << "Model 1 coefficients: " << coefficients1->values[0] << " "
+              << coefficients1->values[1] << " "
+              << coefficients1->values[2] << " "
+              << coefficients1->values[3] << std::endl;
+
+    /*
+    std::cerr << "Model 1 inliers: " << inliers1->indices.size () << std::endl;
+    for (size_t i = 0; i < inliers1->indices.size (); ++i) {
+        std::cerr << inliers1->indices[i] << "    " << cin1->points[inliers1->indices[i]].x << " "
+                  << cin1->points[inliers1->indices[i]].y << " "
+                  << cin1->points[inliers1->indices[i]].z << std::endl;
+    }
+    */
+
+    std::cerr << "Model 2 coefficients: " << coefficients2->values[0] << " "
+              << coefficients2->values[1] << " "
+              << coefficients2->values[2] << " "
+              << coefficients2->values[3] << std::endl;
+
+    /*
+    std::cerr << "Model 2 inliers: " << inliers2->indices.size () << std::endl;
+    for (size_t i = 0; i < inliers2->indices.size (); ++i) {
+        std::cerr << inliers2->indices[i] << "    " << cin2->points[inliers2->indices[i]].x << " "
+                  << cin2->points[inliers2->indices[i]].y << " "
+                  << cin2->points[inliers2->indices[i]].z << std::endl;
+    }
+    */
 
     return (0);
 }

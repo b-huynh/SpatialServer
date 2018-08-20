@@ -22,3 +22,9 @@ target_link_libraries(sic_test_general ${PCL_LIBRARIES})
 
 add_executable(sic_test_crop_box sic_test_crop_box.cpp)
 target_link_libraries(sic_test_crop_box ${PCL_LIBRARIES})
+
+add_executable(model_splitter model_splitter.cpp)
+target_link_libraries(model_splitter ${PCL_LIBRARIES})
+
+add_executable(ground_plane ground_plane.cpp)
+target_link_libraries(ground_plane ${PCL_LIBRARIES})

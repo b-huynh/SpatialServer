@@ -5,10 +5,10 @@ import math
 import random
 
 CPP_EXECUTABLES = ["../registration/build_const/sic_test_general",
-                   "../registration/build_const/sic_test",
-                   "../registration/build_const/sic_test_normal",
-                   "../registration/build_const/sic_test_crop_box"]
-
+                   #"../registration/build_const/sic_test",
+                   #"../registration/build_const/sic_test_normal",
+                   #"../registration/build_const/sic_test_crop_box"
+                   ]
 
 def make_homogeneous(vec):
     res = np.ones(4)
@@ -167,6 +167,9 @@ def calc_mat_mse(mat1, mat2):
     diff = mat1 - mat2
     return np.linalg.norm(diff)
 
+def check_error_from_ident(arr):
+    return calc_mat_mse(arr, np.identity(4))
+
 
 def get_rotation_matrix(tx, ty, tz):
     tx, ty, tz
@@ -246,10 +249,83 @@ def run_sic_test(img_set1_file, img_set2_file, points1, points2,
         print()
 
 
+def run_sic_test_rot_only(img_set1_file, img_set2_file, points1, points2,
+                 executable, include_points,
+                 xtheta, ytheta, ztheta, rand_trans):
+    starting_matrix = align(points1, points2)
+
+    iterations = 40
+
+    correction_matrix = [[1, 0, 0, 0],
+                         [0, 1, 0, 0],
+                         [0, 0, 1, 0],
+                         [0, 0, 0, 1], ]
+
+    np_starting_matrix = np.array(starting_matrix)
+    np_correction_matrix = np.array(correction_matrix)
+    np_ideal_matrix = np.matmul(np_correction_matrix, np_starting_matrix)
+
+    """""
+    Unused
+    np_ideal_matrix_inv = np.linalg.inv(np_ideal_matrix)
+
+    np_p1 = np.zeros((3, 4))
+    np_p2_ideal = np.zeros((3, 4))
+    points2_ideal = [0, 0, 0]
+    for i in range(3):
+        np_p1[i] = make_homogeneous(points1[i])
+        np_p2_ideal[i] = np_ideal_matrix_inv.dot(np_p1[i])
+        points2_ideal[i] = make_un_homogeneous(np_p2_ideal[i]).tolist()
+    """""
+
+    print(
+        "executable\titerations\tfile_name_1\tfile_name_2\tmultiplier\trandom_matrix\toutput_matrix\trm_full\tom_full\tinitial_error\tfinal_error")
+    for i in range(11):
+        multiplier = i * 0.1
+        rand_rot_mat = get_rotation_matrix(multiplier * xtheta,
+                                           multiplier * ytheta,
+                                           multiplier * ztheta)
+        rand_mat = np.zeros((4, 4))
+        rand_mat[3][3] = 1
+        for i in range(3):
+            for j in range(3):
+                rand_mat[i][j] = rand_rot_mat[i][j]
+            rand_mat[i][3] = rand_trans[i] * multiplier
+
+        print(executable + '\t', end="")
+        print(str(iterations) + '\t', end="")
+        print(img_set1_file + '\t', end="")
+        print(img_set2_file + '\t', end="")
+        print(str(multiplier) + '\t', end="")
+        print(json.dumps(rand_mat.tolist()) + '\t', end="")
+
+        rand_mat_inv = np.linalg.inv(rand_mat)
+        new_starting_matrix = np.matmul(rand_mat, np_ideal_matrix)
+
+        initial_error = calc_mat_mse(rand_mat_inv, np.identity(4))
+        matrix_attempt = run_icp_alignment(img_set1_file, img_set2_file, new_starting_matrix.tolist(),
+                                           iterations, executable, include_points, points1, points2)
+        np_matrix_attempt = np.array(matrix_attempt)
+
+        print(json.dumps(matrix_attempt) + '\t', end="")
+        print(json.dumps(new_starting_matrix.tolist()) + '\t', end="")
+        print(json.dumps(np.matmul(np_matrix_attempt, new_starting_matrix).tolist()) + '\t', end="")
+
+        print(str(initial_error) + '\t', end="")
+        final_error = calc_mat_mse(rand_mat_inv, matrix_attempt)
+        print(str(final_error) + '\t', end="")
+        print()
+
+
 def run_full_test(img_set1_file, img_set2_file, points1, points2):
     xtheta = (math.pi * random.random() - math.pi / 2) / 2
     ytheta = (math.pi * random.random() - math.pi / 2) / 2
     ztheta = (math.pi * random.random() - math.pi / 2) / 2
+
+    #xtheta = 0
+    #ytheta = 0
+    #ztheta = 0
+
     rand_trans = np.random.rand(3)
     rand_trans = rand_trans / np.linalg.norm(rand_trans)
     rand_trans = rand_trans * 5
@@ -286,7 +362,7 @@ if __name__ == "__main__":
                   [-0.45007848739624023, -0.9208309650421143, 3.0799418091773987]])
     """""
 
-    """"""
+    """""
     run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
                   "sfm_files/arts-20180514-031331/dense/0/fused.ply",
                   [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
@@ -295,7 +371,7 @@ if __name__ == "__main__":
                   [[0.41922062635421753, -1.3604117631912231, 4.25939767062664],
                    [7.029585599899292, -2.390230119228363, -2.150967299938202],
                    [0.6292206645011902, -0.030775129795074463, -4.300422310829163]])
-    """"""
+    """""
 
     """""
     run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
@@ -306,4 +382,46 @@ if __name__ == "__main__":
                   [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
                    [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
                    [-2.360316574573517, -0.5209612846374512, 2.069183349609375]])
+    """""
+    """""
+    run_full_test("../registration/build/all_split1.ply",
+                  "../registration/build/all_split2.ply",
+                  [[1.0593387186527252, -1.3008719086647034, -2.960729107260704],
+                   [1.1797945499420166, -1.340871900320053, -3.1207291185855865],
+                   [1.1997945457696915, -0.7009602338075638, -3.3701849579811096]],
+                  [[1.0593387186527252, -1.3008719086647034, -2.960729107260704],
+                   [1.1797945499420166, -1.340871900320053, -3.1207291185855865],
+                   [1.1997945457696915, -0.7009602338075638, -3.3701849579811096]])
+
+    """""
+    """""
+    run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  "sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]],
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]])
+                   """""
+
+    run_full_test("sfm_files/ssms-20180603-222504/dense/0/fused.ply",
+                  "sfm_files/arts-20180514-031331/dense/0/fused.ply",
+                  [[4.779156073927879, -1.75099765509367, 0.5790739953517914],
+                   [-1.32035294175148, 0.8092750310897827, -3.8508168645203114],
+                   [-2.360316574573517, -0.5209612846374512, 2.069183349609375]],
+                  [[0.41922062635421753, -1.3604117631912231, 4.25939767062664],
+                   [7.029585599899292, -2.390230119228363, -2.150967299938202],
+                   [0.6292206645011902, -0.030775129795074463, -4.300422310829163]])
+
+
+"""""
+    run_full_test("sfm_files/kirbydslr-20180605-072254/dense/0/fused.ply",
+                  "sfm_files/kohn_corner_hololens/dense/0/fused.ply",
+                  [[1.9399218559265137, -0.23083090782165527, 0.009696006774902344],
+                   [0.7090445160865784, 0.07985347509384155, -0.19074255228042603],
+                   [-1.420516923069954, -0.18014654517173767, -3.1308654844760895]],
+                  [[-29.520148277282715, 2.709713578224182, -23.18048520386219],
+                   [-26.19014835357666, -0.160286545753479, -13.07048511505127],
+                   [2.479081630706787, -1.0002865195274353, 0.09974503517150879]])
     """""

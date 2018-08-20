@@ -22,6 +22,17 @@
     </div>
 
     <div class="bottom-overlay">
+        <div class="checkbox checkbox-overlay" hidden>
+            <label>
+                <input type="checkbox" value="" id="align-check">
+                &nbspUse two-point alignment
+                <br>
+                with ground plane detection
+                <br>
+                (still choose three points)
+            </label>
+        </div>
+        <br>
         <button type="button" id="done_button" class="reg-button">Done</button>
         <br>
         <button type="button" id="double_button" class="reg-button">View Together</button>
@@ -51,6 +62,8 @@
             return;
         }
 
+        let align_check = document.getElementById("align-check");
+
         var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
         $.ajax({
             url: "/upload/align/new",
@@ -63,7 +76,8 @@
                 "ident1": "{{ ident1 }}",
                 "ident2": "{{ ident2 }}",
                 "points1_str": points1_str,
-                "points2_str": points2_str
+                "points2_str": points2_str,
+                "align_check": align_check.checked
             },
             success: function (res) {
                 window.location = res["redirect_url"];

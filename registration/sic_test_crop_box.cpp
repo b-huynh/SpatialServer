@@ -138,14 +138,6 @@ int main(int argc,
         *filter_out2 = *cin2;
     }
 
-    // Transform second point cloud with provided matrix
-    *cloud_tr = *filter_out2;
-    pcl::transformPointCloud(*cloud_tr, *filter_out2, transformation_matrix);
-
-    for(int i = 0; i < 3; i++){
-        points2[i] = transformation_matrix.cast<float>() * points2[i];
-    }
-
     Eigen::Vector4f min1 = points1[0];
     Eigen::Vector4f max1 = points1[0];
     Eigen::Vector4f min2 = points2[0];
@@ -189,23 +181,26 @@ int main(int argc,
     PointCloudT::Ptr cloud_in1(new PointCloudT);
     PointCloudT::Ptr cloud_in2(new PointCloudT);
 
-    for(PointCloudT::iterator it = filter_out1->begin(); it != filter_out1->end(); it++){
-        if(it->x > min1(0) && it->y > min1(1) && it->z > min1(2) &&
-           it->x < max1(0) && it->y < max1(1) && it->z < max1(2)){
+    for (PointCloudT::iterator it = filter_out1->begin(); it != filter_out1->end(); it++) {
+        if (it->x > min1(0) && it->y > min1(1) && it->z > min1(2) &&
+            it->x < max1(0) && it->y < max1(1) && it->z < max1(2)) {
             cloud_in1->push_back(PointT(it->x, it->y, it->z));
         }
     }
     std::cerr << "Point cloud 1 size after crop box: " << cloud_in1->size() << endl;
 
-    for(PointCloudT::iterator it = filter_out2->begin(); it != filter_out2->end(); it++){
-        if(it->x > min2(0) && it->y > min2(1) && it->z > min2(2) &&
-           it->x < max2(0) && it->y < max2(1) && it->z < max2(2)){
+    for (PointCloudT::iterator it = filter_out2->begin(); it != filter_out2->end(); it++) {
+        if (it->x > min2(0) && it->y > min2(1) && it->z > min2(2) &&
+            it->x < max2(0) && it->y < max2(1) && it->z < max2(2)) {
             cloud_in2->push_back(PointT(it->x, it->y, it->z));
         }
     }
     std::cerr << "Point cloud 2 size after crop box: " << cloud_in2->size() << endl;
 
     *cloud_tr = *cloud_in2;
+
+    // Transform second point cloud with provided matrix
+    pcl::transformPointCloud(*cloud_tr, *cloud_in2, transformation_matrix);
 
     // The Iterative Closest Point algorithm
     time.tic();
@@ -306,7 +301,8 @@ int main(int argc,
                 printf("\nICP has converged, score is %+.0e\n", icp.getFitnessScore());
                 std::cout << "\nICP transformation " << ++iterations << " : cloud_in2 -> cloud_in1" << std::endl;
                 transformation_matrix *= icp.getFinalTransformation().cast<double>();  // WARNING /!\ This is not accurate! For "educational" purpose only!
-                cout << transformation_matrix << endl;  // Print the transformation between original pose and current pose
+                cout << transformation_matrix
+                     << endl;  // Print the transformation between original pose and current pose
 
                 ss.str("");
                 ss << iterations;
