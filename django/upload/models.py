@@ -4,7 +4,7 @@ import os
 
 class ImageSet(models.Model):
     desc = models.CharField(max_length=200)
-    ident = models.CharField(max_length=200)
+    ident = models.CharField(max_length=200, db_index=True)
     data = models.TextField(default='{}')
     status = models.CharField(max_length=100, default='')
     upload_date = models.DateTimeField()
@@ -30,3 +30,13 @@ class ImageSet(models.Model):
 
     def get_view_html(self):
         return os.path.join(self.get_html_dir(), 'view.html')
+
+
+class Alignment(models.Model):
+    ident1 = models.CharField(max_length=200, db_index=True)
+    ident2 = models.CharField(max_length=200, db_index=True)
+    type = models.CharField(max_length=10, db_index=True, default='user')
+    matrix = models.CharField(max_length=200)
+    points1 = models.CharField(max_length=200)
+    points2 = models.CharField(max_length=200)
+    upload_date = models.DateTimeField()

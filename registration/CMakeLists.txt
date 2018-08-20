@@ -8,8 +8,23 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable (pairwise_registration pairwise_registration.cpp)
-target_link_libraries (pairwise_registration ${PCL_LIBRARIES})
-
 add_executable(interactive_icp interactive_icp.cpp)
 target_link_libraries(interactive_icp ${PCL_LIBRARIES})
+
+add_executable(sic_test sic_test.cpp)
+target_link_libraries(sic_test ${PCL_LIBRARIES})
+
+add_executable(sic_test_normal sic_test_normal.cpp)
+target_link_libraries(sic_test_normal ${PCL_LIBRARIES})
+
+add_executable(sic_test_general sic_test_general.cpp)
+target_link_libraries(sic_test_general ${PCL_LIBRARIES})
+
+add_executable(sic_test_crop_box sic_test_crop_box.cpp)
+target_link_libraries(sic_test_crop_box ${PCL_LIBRARIES})
+
+add_executable(model_splitter model_splitter.cpp)
+target_link_libraries(model_splitter ${PCL_LIBRARIES})
+
+add_executable(ground_plane ground_plane.cpp)
+target_link_libraries(ground_plane ${PCL_LIBRARIES})

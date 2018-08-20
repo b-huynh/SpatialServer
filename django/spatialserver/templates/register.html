@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="description" content="">
     <meta name="author" content="">
+
+    <script src="/static/libs/jquery/jquery-3.1.1.min.js"></script>
+
     <link rel="stylesheet" type="text/css" href="/static/index.css">
     <title>Spatial Server</title>
 </head>
@@ -12,22 +15,75 @@
 
 <div class='wrapper'>
     <div class='container-left'>
-        <iframe src="/potreereg/{{ ident1 }}"></iframe>
+        <iframe id="iframe_1" src="/potreereg/{{ ident1 }}"></iframe>
     </div>
     <div class='container-right'>
-        <iframe src="/potreereg/{{ ident2 }}"></iframe>
+        <iframe id="iframe_2" src="/potreereg/{{ ident2 }}"></iframe>
     </div>
 
     <div class="bottom-overlay">
+        <div class="checkbox checkbox-overlay" hidden>
+            <label>
+                <input type="checkbox" value="" id="align-check">
+                &nbspUse two-point alignment
+                <br>
+                with ground plane detection
+                <br>
+                (still choose three points)
+            </label>
+        </div>
+        <br>
+        <button type="button" id="done_button" class="reg-button">Done</button>
+        <br>
         <button type="button" id="double_button" class="reg-button">View Together</button>
     </div>
+    {% csrf_token %}
 </div>
 
 <script>
-    let but = document.getElementById("double_button");
-    but.onclick = function () {
+    iframe_1 = $("#iframe_1");
+    iframe_2 = $("#iframe_2");
+
+    let double_button = document.getElementById("double_button");
+    double_button.onclick = function () {
         window.location = "/double/{{ ident1 }}/{{ ident2 }}";
     }
+
+    let done_button = document.getElementById("done_button");
+    done_button.onclick = function () {
+        try {
+            var points1_str = iframe_1.contents().find("#point_data").html();
+            var points1 = JSON.parse(points1_str);
+            var points2_str = iframe_2.contents().find("#point_data").html();
+            var points2 = JSON.parse(points2_str);
+        }
+        catch (err) {
+            alert("Please select 3 points on each point cloud");
+            return;
+        }
+
+        let align_check = document.getElementById("align-check");
+
+        var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
+        $.ajax({
+            url: "/upload/align/new",
+            type: 'post',
+            dataType: 'json',
+            headers: {
+                "X-CSRFToken": csrftoken
+            },
+            data: {
+                "ident1": "{{ ident1 }}",
+                "ident2": "{{ ident2 }}",
+                "points1_str": points1_str,
+                "points2_str": points2_str,
+                "align_check": align_check.checked
+            },
+            success: function (res) {
+                window.location = res["redirect_url"];
+            }
+        });
+    };
 </script>
 
 </body>

@@ -1,3 +1,7 @@
+.checkbox-overlay {
+    color: #8Aa1c4;
+}
+
 .potree-overlay {
     position: absolute;
     float: left;
@@ -8,14 +12,15 @@
 
 .bottom-overlay {
     position: absolute;
-    float: left;
     right: 0px;
     bottom: 0px;
-    margin: 8px 8px;
+    margin: 16px 16px;
     z-index: 100;
 }
 
 .reg-button {
+    margin: 0 auto;
+    display: block;
     cursor: pointer;
     color: black;
     background: #8Aa1c4;

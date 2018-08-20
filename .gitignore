@@ -1,4 +1,7 @@
 *~
+build_const/
+
+django/potree/
 
 # JetBrains IDE
 .idea/

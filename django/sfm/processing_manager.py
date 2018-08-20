@@ -37,7 +37,6 @@ def unzip_and_process(filename, image_set):
     if not os.path.exists(html_dir):
         os.makedirs(html_dir)
 
-    processor.convert_point_cloud()
     processor.convert_dense_ply_file()
     print('Finished model file conversion')
     processor.run_potree_convert()
@@ -77,7 +76,6 @@ def check_status_and_process(ident):
             if not os.path.exists(html_dir):
                 os.makedirs(html_dir)
 
-            processor.convert_point_cloud()
             processor.convert_dense_ply_file()
             print('Finished model file conversion')
             processor.run_potree_convert()

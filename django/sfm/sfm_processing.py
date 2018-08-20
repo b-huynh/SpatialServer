@@ -38,6 +38,7 @@ class SfmProcessor:
             print(bytes.decode(err.output))
             raise err
 
+    # should not be used
     def convert_point_cloud(self):
         if not os.path.exists(self.model_dir):
             mess = 'Error in colmap conversion. Model source directory does not exist.'
