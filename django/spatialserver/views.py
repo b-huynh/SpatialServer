@@ -15,3 +15,7 @@ def potree_reg(request, ident):
 
 def potree_reg_def(request):
     return render(request, 'potree_reg.html', {})
+
+
+def index(request):
+    return render(request, 'index.html', {})

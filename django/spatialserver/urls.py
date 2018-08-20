@@ -28,4 +28,5 @@ urlpatterns = [
                   path('potreereg/<slug:ident>/', views.potree_reg, name='potree_reg'),
                   url(r'potreereg/?$', views.potree_reg_def, name='potree_reg_def'),
                   url(r'^admin/', admin.site.urls),
+                  url(r'^$', views.index, name='index')
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

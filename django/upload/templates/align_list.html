@@ -2,9 +2,8 @@
 
 {% block content %}
 
-<h2>All Point Cloud Alignments</h2>
-{% if aligns %}
-    <table>
+    <h2>All Point Cloud Alignments</h2>
+    <table class="table table-bordered">
         <tr>
             <th>Point Cloud 1</th>
             <th>Point Cloud 2</th>
@@ -30,6 +29,5 @@
             </tr>
         {% endfor %}
     </table>
-{% endif %}
 
 {% endblock %}

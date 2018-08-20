@@ -2,9 +2,8 @@
 
 {% block content %}
 
-<h2>All Image Sets</h2>
-{% if image_sets %}
-    <table>
+    <h2>All Image Sets</h2>
+    <table class="table table-bordered">
         <tr>
             <th>Identifier</th>
             <th>Status</th>
@@ -24,6 +23,5 @@
             </tr>
         {% endfor %}
     </table>
-{% endif %}
 
 {% endblock %}
